@@ -1,6 +1,7 @@
 using HarmonyLib;
 using Photon.Pun;
 using Photon.Realtime;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 namespace RepoCheatMenu;
@@ -1506,6 +1507,21 @@ internal static class DeferredAntiCrashInstallPatch
 // text mesh - a huge string here is a one-packet crash. The whole-RPC size drop above is the
 // blanket guard; this trims a merely-long string down instead of dropping it, so a legit-but-long
 // chat line/name still shows (truncated) rather than vanishing.
+//
+// Length alone doesn't cover the actual risk here: the game never strips TextMeshPro rich-text
+// tags (`<size=...>`, `<color=...>`, etc.) from either of these RPCs before rendering them
+// (confirmed by studying a third-party anti-cheat mod for this game, which patches exactly these
+// same two RPCs specifically to strip `<...>` tags - see CLAUDE.md's mod-research notes) - a
+// malicious tag well under the length cap can still corrupt or crash the text mesh rendering it,
+// so a length-only clamp leaves that whole attack surface open. Stripping any `<...>`-shaped
+// sequence before the length clamp closes it the same way that mod does.
+internal static class AntiCrashTextSanitize
+{
+    private static readonly Regex RichTextTag = new(@"<(\S+?)>", RegexOptions.Compiled);
+
+    public static string Strip(string text) => text == null ? null : RichTextTag.Replace(text, "");
+}
+
 [HarmonyPatch(typeof(PlayerAvatar), "ChatMessageSendRPC")]
 internal static class AntiCrashChatClampPatch
 {
@@ -1513,6 +1529,7 @@ internal static class AntiCrashChatClampPatch
     private static void Prefix(ref string _message)
     {
         if (!CheatState.AntiCrash.Value || _message == null) return;
+        _message = AntiCrashTextSanitize.Strip(_message);
         if (_message.Length > 200) _message = _message.Substring(0, 200);
     }
 }
@@ -1524,7 +1541,13 @@ internal static class AntiCrashNameClampPatch
     private static void Prefix(ref string _playerName, ref string _steamID)
     {
         if (!CheatState.AntiCrash.Value) return;
-        if (_playerName != null && _playerName.Length > 64) _playerName = _playerName.Substring(0, 64);
+        if (_playerName != null)
+        {
+            _playerName = AntiCrashTextSanitize.Strip(_playerName);
+            if (_playerName.Length > 64) _playerName = _playerName.Substring(0, 64);
+        }
+        // steamID is never rendered as rich text (it's an internal key, not display text) - length
+        // clamp only, stripping tags here would just corrupt a real ID for no security benefit.
         if (_steamID != null && _steamID.Length > 64) _steamID = _steamID.Substring(0, 64);
     }
 }

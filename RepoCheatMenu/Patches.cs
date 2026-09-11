@@ -1517,7 +1517,13 @@ internal static class DeferredAntiCrashInstallPatch
 // sequence before the length clamp closes it the same way that mod does.
 internal static class AntiCrashTextSanitize
 {
-    private static readonly Regex RichTextTag = new(@"<(\S+?)>", RegexOptions.Compiled);
+    // \S+? (non-whitespace only) misses any tag with a space in its body - TMP's own multi-
+    // attribute tags legitimately contain spaces (`<quad material="x" width=999em height=999em>`),
+    // and those passed through completely unstripped under the original pattern, found and
+    // confirmed via a follow-up security-review pass on this same commit. [^<>]+ (anything that
+    // isn't itself a bracket) still stops at the first `>` the same way the lazy quantifier did,
+    // so it can't span across two separate tags, but it also catches the whitespace case.
+    private static readonly Regex RichTextTag = new(@"<[^<>]+>", RegexOptions.Compiled);
 
     public static string Strip(string text) => text == null ? null : RichTextTag.Replace(text, "");
 }

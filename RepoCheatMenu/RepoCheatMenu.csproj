@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>10</LangVersion>
+    <AssemblyName>RepoCheatMenu</AssemblyName>
+    <!-- This is a class library by SDK default, which normally does NOT copy its NuGet
+         dependencies' DLLs to the output folder (it assumes a host app will resolve them).
+         BepInEx has no such resolution step - it just loads RepoCheatMenu.dll directly - so
+         without this, Roslyn's own assemblies (needed by ScriptEngine.cs to compile/run user
+         scripts at runtime) would be missing from bin/Release and every script would fail to
+         run with a FileNotFoundException the moment BepInEx loaded the plugin. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <!-- NuGet feeds needed to resolve BepInEx and the publicized R.E.P.O. game assemblies -->
+  <PropertyGroup>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+      https://nuget.windows10ce.com/nuget/v3/index.json
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Core" Version="5.*" ExcludeAssets="runtime" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.62" IncludeAssets="compile" PrivateAssets="all" />
+    <PackageReference Include="R.E.P.O.GameLibs.Steam" Version="*-*" PrivateAssets="all" />
+    <!-- Runs user-typed C# script modules (see ScriptEngine.cs/ScriptModuleManager.cs) - unlike
+         the packages above, this one's actual runtime DLLs are NOT already present in the game
+         process, so it needs CopyLocalLockFileAssemblies (above) to land in the output folder. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.8.0" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,21 @@
+# Build output
+bin/
+obj/
+*.dll
+
+# Decompiled reference material (the game and its libraries, not our own code -
+# huge, and not something we want to track/redistribute)
+decompiled/
+decompiled-libs/
+decompiled-mods/
+
+# Distributable archives sent to friends - build artifacts, not source
+dist/
+*.zip
+
+# Unrelated tooling checked out at the project root (third-party plugin repos,
+# several carry their own nested .git folders)
+skills/
+
+# BepInEx bridge scratch files (command.txt/result.txt for the debug bridge)
+**/RepoCheatMenu_Bridge/

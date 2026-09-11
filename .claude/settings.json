@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tasklist*)",
+      "PowerShell(Get-ChildItem*)",
+      "PowerShell(Start-Sleep*)",
+      "PowerShell(Set-Location*)",
+      "PowerShell(Get-Process*)",
+      "PowerShell(Get-CimInstance*)",
+      "PowerShell(cd*)",
+      "PowerShell(Get-Content*)"
+    ]
+  }
+}

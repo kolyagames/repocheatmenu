@@ -1,0 +1,172 @@
+СПРАВКА ДЛЯ НЕЙРОСЕТИ: как писать скрипты для консоли RepoCheatMenu (игра R.E.P.O.)
+=====================================================================================
+
+Это не общий C#. Это скрипт, который выполняется ВНУТРИ уже запущенной игры через
+встроенный Roslyn-компилятор (Microsoft.CodeAnalysis.CSharp.Scripting). Ниже — точное
+описание среды: что доступно, что нельзя, и как не подвесить игру. Следуй этому файлу
+буквально, не выдумывай методы/поля, которых здесь нет — пиши только то, что реально
+существует в описанном API, либо явно помечай как предположение.
+
+
+1. КАК ЭТО ВЫПОЛНЯЕТСЯ (важно для стиля кода)
+-----------------------------------------------
+- Пользователь пишет "top-level" C#-код (без class/namespace/Main) в текстовое поле в
+  игровом GUI и жмёт "Запустить". Код компилируется и выполняется как тело async-метода.
+- Доступны верхнеуровневые using из коробки (не нужно писать `using` самому):
+  System, System.Collections.Generic, System.Threading.Tasks, UnityEngine,
+  Photon.Pun, Photon.Realtime, RepoCheatMenu.
+- Можно писать `await` прямо в скрипте верхнего уровня — это ОБЯЗАТЕЛЬНО для любого
+  ожидания сетевых операций (см. пункт 2).
+- Выполнение запускается асинхронно (ScriptEngine.StartRun), НЕ блокирует игру во время
+  ожидания. Но это работает только если сам скрипт использует await — если код тупо
+  крутится в busy-loop, поток всё равно виснет.
+- Скрипт может вернуть значение (просто написать выражение последней строкой без `;`,
+  как в интерактивном REPL) — оно попадёт в лог как "=> значение".
+- Ошибки компиляции и исключения во время выполнения НЕ роняют игру — они ловятся и
+  показываются пользователю текстом. Но зависание (см. пункт 2) поймать нельзя.
+
+
+2. САМОЕ ГЛАВНОЕ ПРАВИЛО: НИКОГДА НЕ ПИШИ ПУСТОЙ БЛОКИРУЮЩИЙ ЦИКЛ ОЖИДАНИЯ
+-----------------------------------------------------------------------------
+НЕПРАВИЛЬНО (подвесит игру насмерть):
+    while (!PhotonNetwork.InRoom) { }
+
+ПРАВИЛЬНО:
+    while (!PhotonNetwork.InRoom)
+        await Task.Delay(100);
+
+Причина: Photon/Steam выполняют операции (создание комнаты, лобби) асинхронно, а их
+собственный callback-цикл прокачивается через Update() того же главного потока Unity.
+Если код скрипта синхронно крутится в while без await, он никогда не отдаёт поток —
+и Update() тоже никогда не выполнится — то есть то самое условие, которого скрипт
+ждёт, никогда не станет true. Итог: игра замирает навсегда (требуется Alt+F4/Task
+Manager). Правило без исключений: любое "подожди, пока не станет так-то" — только
+через `await Task.Delay(N);` внутри цикла, никогда голый спин.
+
+Для однократной паузы: `await Task.Delay(500);` (мс).
+Для "отдать один кадр": `await Task.Yield();` тоже подойдёт, но Task.Delay надёжнее.
+
+
+3. ПОЛНЫЙ СПИСОК ТОГО, ЧТО ДОСТУПНО БЕЗ ПРЕФИКСА (объект ScriptGlobals)
+--------------------------------------------------------------------------
+Это единственный API этого мода, который видит скрипт. Всё остальное в моде —
+internal-классы (CheatState, GameReflect, KnockdownHack и т.п.) — скрипту НЕ видно,
+скрипт компилируется в отдельную сборку и видит только public-поверхность.
+
+  PlayerAvatar Local          — твой собственный игрок (PlayerAvatar.instance)
+  PlayerController Controller — твой контроллер движения (PlayerController.instance)
+  GameDirector Director       — GameDirector.instance
+  SteamManager Steam          — SteamManager.instance (Steam-лобби: HostLobby, SetLobbyData,
+                                 JoinLobby, LeaveLobby и т.д. — публичные методы этого класса
+                                 вызываются прямо, напр. Steam.HostLobby(true))
+  GameManager Game            — GameManager.instance
+  RunManager Run              — RunManager.instance
+
+  List<PlayerAvatar> Players()       — список всех игроков в текущем раунде
+  List<PlayerAvatar> OtherPlayers()  — то же самое, но без Local
+
+  void Log(object message)           — пишет строку в лог мода (BepInEx console/лог-файл)
+
+  bool RenameRoom(string name)
+      — переименовывает УЖЕ существующее лобби/комнату (и Steam-данные, и Photon-рум).
+        Не создаёт лобби с нуля — для этого сначала нужно реально войти в комнату
+        (см. пример в разделе 6).
+
+  T GetField<T>(object instance, string fieldName)
+  void SetField(object instance, string fieldName, object value)
+  void Call(object instance, string methodName, params object[] args)
+      — обход через reflection для полей/методов игры, которые не являются
+        по-настоящему public в реальной загруженной Assembly-CSharp.dll (см. раздел 4).
+
+  bool SetCheat(string name, bool value)   — включает/выключает существующий тумблер
+                                              мода по имени (см. раздел 5 — полный список)
+  bool GetCheat(string name)               — читает текущее значение тумблера
+
+
+4. КРИТИЧЕСКИ ВАЖНО: ПОЧЕМУ ПРЯМОЙ ДОСТУП К ПОЛЯМ ИГРЫ МОЖЕТ УПАСТЬ С ИСКЛЮЧЕНИЕМ
+-------------------------------------------------------------------------------------
+Компилятор игры (NuGet-пакет с "publicized" сборками) помечает приватные поля игры как
+public ТОЛЬКО в справочной сборке для компиляции. Настоящая Assembly-CSharp.dll, которая
+реально загружена в процессе игры, всё ещё держит эти поля private/internal — и .NET/
+Mono это реально проверяет в runtime. Поэтому:
+
+  local.someInternalField = true;      // может скомпилироваться, но бросит
+                                        // FieldAccessException в момент выполнения
+
+Правильно — через reflection-обёртки:
+  SetField(local, "someInternalField", true);
+  var value = GetField<int>(local, "someInternalField");
+  Call(local, "SomeInternalMethod", arg1, arg2);
+
+ПРАВИЛО: если не уверен(а), что конкретное поле/метод у игрового класса ДЕЙСТВИТЕЛЬНО
+public (а не просто "выглядит public в IntelliSense") — используй GetField/SetField/Call.
+Настоящие Assembly-CSharp-типы (PlayerAvatar, PlayerController, GameManager, RunManager,
+SteamManager, GameDirector и т.д.) сами по себе доступны и их публичные члены (методы/
+свойства, реально помеченные public в исходнике игры) вызываются напрямую без обёртки —
+проблема именно с internal/private членами.
+
+
+5. ПОЛНЫЙ СПИСОК ИМЁН ДЛЯ SetCheat/GetCheat (регистр важен, это точные имена полей)
+---------------------------------------------------------------------------------------
+GodMode, HighStrength, UnlimitedGrabRange, GrabThroughWalls, NoOvercharge,
+InfiniteBatteries, PowerGrab, GentleDrop, InfiniteStamina, InfiniteJumps, NoKnockdown,
+NoFallDamage, AntiKnockback, Strafe, Fly, Noclip, ForceWings, WingsRainbow, EyeColor,
+EyeRainbow, NoGrabMaxTime, EspPlayers, EspEnemies, EspValuables, EspCarts,
+EspExtractionPoints, EspLoadout, AutoActivateExtraction, EspShaderMode, EspRainbow,
+BetterVision, ThirdPerson, FlashInCrouch, MaxHeadBattery, LoadingForceSkip, KolobokMode,
+Unbreakable, UseLaser, MeleeVibrate, StealHeldItem, AlwaysInteract, SkipMoonWait,
+SkipResultsScreen, DestroyAllValuables, ShopDestroyer, LootMagnet, CartPuller, AutoLoot,
+AutoFarm, ExtractionRadar, KnockdownAll, KnockdownBanish, KnockdownBanishKill,
+AntiAimSpin, DinnerBone, TPose, PlayerCage, PlayerCageAll, FreezeAll, MassDisarm,
+YeetStorm, ExtractionCamperPunish, ShopExecution, AutoShopExecute, CarryThrustStorm,
+GrabLockTarget, GrabLockAll, UnequipStorm, WeaponDrainAll, DisarmOnGrab,
+ExtractionSnipe, AutoRevealValuables, ProjectileStrikeStorm, VehicleWobbleStorm,
+ArenaSabotage, ArenaWeaponsSabotage, ArenaLegitSabotage, SwarmStorm, LockAllDoors,
+TrapRoom, EnemyDropKill, StealAllHeldItems, SendTestPacket, ForceEuRegion
+
+Пример: SetCheat("Fly", true);
+Если имя не найдено — SetCheat/GetCheat просто тихо возвращают false, без исключения.
+
+ЧЕГО НЕТ в SetCheat/GetCheat: однократные кнопки-действия мода (например "Nuke",
+"ItemPurge", телепорты и т.п.) реализованы в internal-классах и НЕ видны скрипту в
+принципе — их нельзя вызвать по имени. Если пользователь просит воспроизвести такое
+действие, пиши логику с нуля через Photon/GetField/SetField/Call, а не пытайся угадать
+несуществующий метод типа Call(null, "Nuke").
+
+
+6. ГОТОВЫЙ РАБОЧИЙ ПРИМЕР (проверенная последовательность из декомпилированной игры)
+----------------------------------------------------------------------------------------
+Создание/подключение к Photon-комнате с произвольным именем:
+
+    string roomName = "Моя комната";
+
+    var options = new RoomOptions { MaxPlayers = 6, IsVisible = true, IsOpen = true };
+    PhotonNetwork.JoinOrCreateRoom(roomName, options, TypedLobby.Default);
+
+    while (!PhotonNetwork.InRoom)
+        await Task.Delay(100);
+
+    Log($"В комнате: {PhotonNetwork.CurrentRoom.Name}");
+    // Steam.SetLobbyData(roomName); // чтобы то же имя видели в приглашениях Steam
+
+Другие простые примеры:
+
+    Log(Local.transform.position);
+
+    SetCheat("Fly", true);
+    SetCheat("GodMode", true);
+
+    foreach (var p in OtherPlayers())
+        Log(p.playerName);
+
+
+7. ЧЕК-ЛИСТ ПЕРЕД ТЕМ, КАК ОТДАТЬ СКРИПТ ПОЛЬЗОВАТЕЛЮ
+---------------------------------------------------------
+[ ] Нет ни одного "while(...) { }" без await внутри (или Task.Delay, или иной await)
+[ ] Все обращения к полям/методам игры, в которых не 100% уверен(а) — через
+    GetField/SetField/Call, а не напрямую
+[ ] Используются только имена из раздела 5 для SetCheat/GetCheat — не выдуманные
+[ ] Если код должен что-то создать сетевое (комната/лобби) — используются реальные
+    Photon/Steam API (PhotonNetwork.*, Steam.*), а не придуманные методы этого мода
+[ ] Код — top-level (без class/namespace/static void Main), это НЕ обычная C#-программа
+[ ] using не нужен — все нужные namespace уже импортированы (раздел 1)

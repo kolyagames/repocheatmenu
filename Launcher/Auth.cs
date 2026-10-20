@@ -53,8 +53,11 @@ internal static class Auth
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(12) };
 
     // Офлайн-аккаунт для разработки: логин dev, пароль 123. Не ходит на сервер и не проверяет лицензию -
-    // сессия живёт локально, Verify её просто подтверждает. ВНИМАНИЕ: это чёрный ход мимо лицензии, любой
-    // с такой сборкой войдёт тем же паролем. Перед раздачей сборки покупателям поставьте false.
+    // сессия живёт локально, Verify её просто подтверждает. Это чёрный ход мимо лицензии, любой с такой
+    // сборкой войдёт тем же паролем, поэтому в релизных сборках он выключен целиком: при обычном
+    // `dotnet build` без явного `-c Debug` символ DEBUG не определён, весь блок ниже выпадает из IL,
+    // DevAccountEnabled возвращает false и попытки войти через dev-аккаунт отвергаются как «отключён».
+#if DEBUG
     private const bool DevAccountEnabled = true;
     private const string DevLogin = "dev", DevPassword = "123", DevToken = "offline-dev";
 
@@ -67,6 +70,11 @@ internal static class Auth
         Lifetime = true,
         Plan = "dev (офлайн)",
     };
+#else
+    private const bool DevAccountEnabled = false;
+    private const string DevLogin = "", DevPassword = "", DevToken = "";
+    private static Session DevSession(string server) => null;
+#endif
 
     public static string Server(string exeDir)
     {

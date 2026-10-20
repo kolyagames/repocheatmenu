@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="g" cx="0.5" cy="0.4" r="0.6">
+      <stop offset="0" stop-color="#b094ff"/>
+      <stop offset="1" stop-color="#5c3dc9"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0a0d13"/>
+  <!-- Ghost silhouette, same shape family as the banner -->
+  <path d="M 32 12
+           C 20 12, 14 20, 14 30
+           L 14 50
+           Q 14 54, 18 52
+           Q 21 48, 24 52
+           Q 27 48, 30 52
+           Q 33 48, 36 52
+           Q 39 48, 42 52
+           Q 45 48, 48 52
+           Q 50 54, 50 50
+           L 50 30
+           C 50 20, 44 12, 32 12 Z"
+        fill="url(#g)"/>
+  <!-- Eyes -->
+  <ellipse cx="25" cy="32" rx="2.5" ry="4" fill="#0a0d13"/>
+  <ellipse cx="39" cy="32" rx="2.5" ry="4" fill="#0a0d13"/>
+</svg>

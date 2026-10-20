@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RepoCheatMenu — вспомогательный мод для R.E.P.O.</title>
+<meta name="description" content="RepoCheatMenu — вспомогательный мод для R.E.P.O. с призраком-наблюдателем, блочными скриптами, HUD и ESP в стиле Rockstar. Личный проект by Kolya.">
+<meta property="og:title" content="RepoCheatMenu">
+<meta property="og:description" content="Призрак. Блоки. Один мод. Вспомогательный мод для R.E.P.O., собранный под себя.">
+<meta property="og:image" content="assets/banner.svg">
+<meta name="theme-color" content="#070a11">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="bar">
+    <div class="wrap bar__inner">
+        <a class="brand" href="#top"><span class="brand__dot"></span>RepoCheatMenu</a>
+        <nav aria-label="Разделы">
+            <a href="#features">Фичи</a>
+            <a href="#ghost">Призрак</a>
+            <a href="#blocks">Блоки</a>
+            <a href="#install">Установка</a>
+            <a href="#build">Сборка</a>
+        </nav>
+        <a class="btn btn--ghost btn--sm" href="https://github.com/kolyagames/repocheatmenu">GitHub</a>
+    </div>
+</header>
+
+<main id="top">
+
+    <section class="hero">
+        <div class="hero__grid"></div>
+        <div class="hero__spot"></div>
+        <!-- Decorative blurred menu mock, same shapes as the banner -->
+        <div class="hero__mock" aria-hidden="true">
+            <div class="mock">
+                <div class="mock__rail">
+                    <span class="mock__ico mock__ico--on"></span>
+                    <span class="mock__ico"></span>
+                    <span class="mock__ico"></span>
+                    <span class="mock__ico"></span>
+                    <span class="mock__ico"></span>
+                </div>
+                <div class="mock__tabs">
+                    <span class="mock__tab mock__tab--on"></span>
+                    <span class="mock__tab"></span>
+                    <span class="mock__tab mock__tab--w"></span>
+                    <span class="mock__tab"></span>
+                    <span class="mock__tab mock__tab--w"></span>
+                    <span class="mock__tab"></span>
+                </div>
+                <div class="mock__panel">
+                    <div class="mock__row"><span class="mock__lbl"></span><span class="mock__sw mock__sw--on"></span></div>
+                    <div class="mock__row"><span class="mock__lbl mock__lbl--w"></span><span class="mock__sw"></span></div>
+                    <div class="mock__row"><span class="mock__lbl"></span><span class="mock__sw mock__sw--on"></span></div>
+                    <div class="mock__row"><span class="mock__lbl mock__lbl--w"></span><span class="mock__sw"></span></div>
+                    <div class="mock__row mock__row--tall">
+                        <span class="mock__lbl"></span>
+                        <div class="mock__track"><div class="mock__fill"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero__body">
+            <div class="hero__brand"><span class="brand__dot"></span>RepoCheatMenu</div>
+            <h1 class="hero__title">Призрак. Блоки. <span class="hero__title--thin">Один мод.</span></h1>
+            <p class="hero__sub"><strong>RepoCheatMenu</strong> — вспомогательный мод для <strong>R.E.P.O.</strong>, собранный под себя.</p>
+            <div class="hero__actions">
+                <a class="btn btn--main" href="https://github.com/kolyagames/repocheatmenu">Исходный код</a>
+                <a class="btn btn--ghost" href="#install">Как поставить</a>
+            </div>
+            <p class="note">Приватный репозиторий · личный проект · R.E.P.O. by semiwork.</p>
+        </div>
+    </section>
+
+    <section class="block" id="features">
+        <div class="wrap">
+            <h2>Что внутри</h2>
+            <p class="lead">Один мод, в котором живёт то, что помогает мне и друзьям играть и не падать от багов игры.</p>
+
+            <div class="cards">
+                <div class="card">
+                    <span class="card__ico" aria-hidden="true">▶</span>
+                    <h3>Rockstar-меню</h3>
+                    <p><kbd>F6</kbd> — новое меню в стиле Rockstar ClickGUI (Modern и Dropdown-режимы, поиск).<br><kbd>RightShift</kbd> — старое меню, функционально одинаковое.</p>
+                </div>
+                <div class="card">
+                    <span class="card__ico" aria-hidden="true">◉</span>
+                    <h3>Призрак-наблюдатель</h3>
+                    <p>Вас нет в комнате для других клиентов, но вы её видите целиком. Голос слышат <strong>все, без мода</strong>.</p>
+                </div>
+                <div class="card">
+                    <span class="card__ico" aria-hidden="true">▦</span>
+                    <h3>Блочные скрипты</h3>
+                    <p>Scratch-подобный редактор поведения бота. Повтор, условия, переменные, автозапуск, обмен скриптами через буфер.</p>
+                </div>
+                <div class="card">
+                    <span class="card__ico" aria-hidden="true">▮</span>
+                    <h3>HUD-карточки</h3>
+                    <p>Порт карточек из Rockstar HUD: игроки, враги, ценности, лут, пинг, остров уведомлений. Перетаскиваются.</p>
+                </div>
+                <div class="card">
+                    <span class="card__ico" aria-hidden="true">◆</span>
+                    <h3>ESP</h3>
+                    <p>Nametag, 3D-коробки, стрелки за экраном, круги прыжков, маркеры друзей, подсветка ценностей и ловушек.</p>
+                </div>
+                <div class="card">
+                    <span class="card__ico" aria-hidden="true">⟳</span>
+                    <h3>Горячая перезагрузка</h3>
+                    <p>Загрузчик перечитывает ядро мода без перезапуска игры. Правка → <code>deploy.ps1</code> → мод обновился в живой сессии.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="block block--alt" id="ghost">
+        <div class="wrap wrap--split">
+            <div>
+                <h2>Призрак, которого слышат</h2>
+                <p class="lead">Ваш аватар не создаётся у других игроков — фильтр режет исходящие события Instantiate / Destroy / сериализации для видов, созданных вами. Но вы по-прежнему в комнате: видите игру, слышите чат, можете хватать предметы.</p>
+                <p>С версии <code>1.0.112</code> фильтр пропускает ровно один prefab — <code>Voice</code>, это игровой голосовой PhotonView. Остальным игрокам достаётся «кукла с микрофоном» без модели, звук приходит 2D (нет 3D-позиции, т.к. аватара рядом нет). <strong>Мод у них ставить не нужно.</strong></p>
+                <ul class="dots">
+                    <li>Телекинез: луч к предмету на прицеле, Shift — пнуть</li>
+                    <li>Прыжки к ценностям, грузовику, точке выхода, выбранному игроку</li>
+                    <li>Слежка глазами за игроком</li>
+                    <li>Пауза в комнате: хост не видит вас в игре, но видит в Steam-лобби</li>
+                </ul>
+            </div>
+            <aside class="side">
+                <div class="side__card">
+                    <div class="side__badge">v1.0.112</div>
+                    <h4>Как слышат голос</h4>
+                    <ol class="num">
+                        <li>Фильтр пропускает один prefab — <code>Voice</code>.</li>
+                        <li>У всех игроков появляется PhotonView в сцене на (1000,1000,1000).</li>
+                        <li><code>Recorder.UserData = ViewID</code>.</li>
+                        <li>Их <code>PhotonVoiceView.SpeakerInUse</code> играет 2D-звук.</li>
+                    </ol>
+                </div>
+            </aside>
+        </div>
+    </section>
+
+    <section class="block" id="blocks">
+        <div class="wrap">
+            <h2>Поведение из блоков</h2>
+            <p class="lead">Вкладка «Блоки» в меню <kbd>F6</kbd>. Собираете цепочку и запускаете. Автозапуск, повтор, условия, иначе, переменные, вызов других скриптов, прервать цикл. Скрипт сохраняется в <code>BepInEx\config\RepoCheatMenu_Blocks\*.blk</code>, экспортируется в буфер обмена для друзей.</p>
+
+            <div class="demo">
+                <div class="demo__head">
+                    <div class="demo__dots"><span></span><span></span><span></span></div>
+                    <div class="demo__title">Обход серверов.blk</div>
+                </div>
+                <div class="demo__body">
+                    <div class="bl bl--mod"><span class="bl__cat"></span>Переменная <code>заходов</code> = <b>0</b></div>
+                    <div class="bl bl--ctrl"><span class="bl__cat"></span>Повторить <b>3</b> раз</div>
+                    <div class="bl bl--net bl--i1"><span class="bl__cat"></span>Зайти на случайный новый сервер</div>
+                    <div class="bl bl--ctrl bl--i1"><span class="bl__cat"></span>Если прошлый блок удался</div>
+                    <div class="bl bl--mod bl--i2"><span class="bl__cat"></span>Переменная <code>заходов</code> + <b>1</b></div>
+                    <div class="bl bl--wait bl--i2"><span class="bl__cat"></span>Ждать <b>60 с</b></div>
+                    <div class="bl bl--net bl--i2"><span class="bl__cat"></span>Выйти в главное меню</div>
+                    <div class="bl bl--ctrl bl--i1"><span class="bl__cat"></span>Иначе</div>
+                    <div class="bl bl--ctrl bl--i2"><span class="bl__cat"></span>Прервать цикл</div>
+                    <div class="bl bl--ctrl bl--i1 bl--end"><span class="bl__cat"></span>Конец «Если»</div>
+                    <div class="bl bl--ctrl bl--end"><span class="bl__cat"></span>Конец «Повторить»</div>
+                    <div class="bl bl--mod"><span class="bl__cat"></span>Уведомление «Обход закончен»</div>
+                </div>
+            </div>
+
+            <div class="chips">
+                <span class="chip chip--net">сеть</span>
+                <span class="chip chip--wait">ожидание</span>
+                <span class="chip chip--mod">мод</span>
+                <span class="chip chip--ctrl">управление</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="block block--alt" id="install">
+        <div class="wrap">
+            <h2>Установка в один клик</h2>
+            <p class="lead">Через консольный лаунчер модпаков. Выбираете пак — DEFAULT / OPTIMIZATION / HD — и запускаете игру.</p>
+            <ol class="steps">
+                <li>
+                    <h3>Скачать</h3>
+                    <p>Собрать локально через <code>Собрать и обновить.bat</code> в корне репо. Готовая папка попадает на рабочий стол в <code>%USERPROFILE%\Desktop\RepoLauncher\</code>.</p>
+                </li>
+                <li>
+                    <h3>Запустить</h3>
+                    <p>Открыть <code>RepoLauncher.exe</code>. Выбрать модпак и нажать «Играть» — лаунчер сам поставит мод в <code>%LOCALAPPDATA%\RepoLauncher\profiles\&lt;pack&gt;\</code>, запустит Steam с <code>--doorstop-target-assembly</code>.</p>
+                </li>
+                <li>
+                    <h3>Играть</h3>
+                    <p>В игре <kbd>F6</kbd> — меню, <kbd>G</kbd> — телекинез (на предмете), <kbd>]</kbd> — паник (скрыть всё, что рисует мод).</p>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    <section class="block" id="build">
+        <div class="wrap">
+            <h2>Сборка из исходников</h2>
+            <p class="lead">Нужен .NET 8 SDK и PowerShell 5.1+.</p>
+            <div class="code">
+<pre><code># Полная сборка одной кнопкой (бамп версии, обфускация, лаунчер, рабочий стол)
+powershell -File tools\build-all.ps1
+
+# Только ядро мода, без лаунчера
+cd RepoCheatMenu
+dotnet build -c Release
+
+# Горячая перезагрузка в живой игре
+powershell -File tools\deploy.ps1</code></pre>
+            </div>
+            <p class="fine">Два файла локально не распространяются (чужой копирайт): шрифты Apple <code>SF Pro Display</code> и иконки Rockstar <code>RockIconData.cs</code>. Как положить их обратно — рядом с README-файлами в репо.</p>
+
+            <h3 class="h3-sep">Структура</h3>
+            <div class="struct">
+                <div class="struct__row"><code>RepoCheatMenu/</code><span>мод: Harmony-патчи, UI, HUD, фичи</span></div>
+                <div class="struct__row"><code>RepoCheatMenu.Loader/</code><span>горячая перезагрузка ядра</span></div>
+                <div class="struct__row"><code>Launcher/</code><span>консольный <code>RepoLauncher.exe</code></span></div>
+                <div class="struct__row"><code>RepoInfiniteStrength/</code><span>отдельный маленький мод</span></div>
+                <div class="struct__row"><code>tools/</code><span>скрипты сборки, обфускации, аудита</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="block block--cta">
+        <div class="wrap">
+            <h2>Как это работает</h2>
+            <p class="lead">Клиентский BepInEx + Harmony мод для R.E.P.O. (Unity + Mono + Photon PUN2). Не ломает сетевой код игры снаружи, работает с теми же API, что обычный игрок.</p>
+            <div class="stack">
+                <div><span>BepInEx</span><p>загрузчик модов</p></div>
+                <div><span>Harmony</span><p>рантайм-патчи</p></div>
+                <div><span>Photon PUN2</span><p>сетевой стек игры</p></div>
+                <div><span>Unity · Mono</span><p>рантайм R.E.P.O.</p></div>
+                <div><span>Roslyn</span><p>C#-скрипты и блоки</p></div>
+                <div><span>Facepunch.Steamworks</span><p>Steam-лобби</p></div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <div class="wrap">
+        <span>© 2026 Kolya. Личный проект. Приватный репозиторий.</span>
+        <span>R.E.P.O. — игра <a href="https://semiwork.com/">semiwork</a>. Мод с ней не связан, ею не поддерживается и не одобряется.</span>
+        <span>Разработка: <a href="https://github.com/kolyagames">kolyagames</a> + Claude (Anthropic).</span>
+    </div>
+</footer>
+
+</body>
+</html>

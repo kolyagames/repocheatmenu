@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400"
+     font-family="-apple-system, 'SF Pro Display', 'Inter', system-ui, 'Segoe UI', sans-serif">
+  <defs>
+    <!-- Deep near-black with the faintest blue bias -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a0d13"/>
+      <stop offset="1" stop-color="#070a11"/>
+    </linearGradient>
+
+    <!-- Grid that fades out toward the sides -->
+    <pattern id="grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="gridMask" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0" stop-color="#fff" stop-opacity="1"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="gridFade">
+      <rect width="1280" height="400" fill="url(#gridMask)"/>
+    </mask>
+
+    <!-- Soft purple spotlight behind the title, same accent as the mod's own menu -->
+    <radialGradient id="spot" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#906bff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#906bff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Blur used on the decorative menu mock on the left -->
+    <filter id="blur" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+
+  <!-- Base -->
+  <rect width="1280" height="400" fill="url(#bg)"/>
+  <!-- Grid, faded at edges -->
+  <rect width="1280" height="400" fill="url(#grid)" mask="url(#gridFade)"/>
+
+  <!-- Decorative "menu" mock on the far left, blurred, slightly tilted -->
+  <g transform="translate(-70 65) rotate(-6)" filter="url(#blur)" opacity="0.9">
+    <!-- Panel -->
+    <rect x="0" y="0" width="340" height="280" rx="14" fill="#13111a" stroke="#2a2635" stroke-width="1"/>
+    <!-- Rail (category icons) -->
+    <rect x="0" y="0" width="56" height="280" rx="14" fill="#0f0d14"/>
+    <circle cx="28" cy="34" r="8" fill="#906bff" fill-opacity="0.9"/>
+    <circle cx="28" cy="68" r="6" fill="#ffffff" fill-opacity="0.25"/>
+    <circle cx="28" cy="102" r="6" fill="#ffffff" fill-opacity="0.25"/>
+    <circle cx="28" cy="136" r="6" fill="#ffffff" fill-opacity="0.25"/>
+    <circle cx="28" cy="170" r="6" fill="#ffffff" fill-opacity="0.25"/>
+    <!-- Tabs column -->
+    <rect x="72" y="20" width="84" height="12" rx="3" fill="#ffffff" fill-opacity="0.18"/>
+    <rect x="72" y="42" width="68" height="10" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+    <rect x="72" y="60" width="76" height="10" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+    <rect x="72" y="78" width="60" height="10" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+    <rect x="72" y="96" width="80" height="10" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+    <rect x="72" y="114" width="64" height="10" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+    <!-- Settings panel: switch rows -->
+    <rect x="166" y="20" width="160" height="36" rx="8" fill="#1a1724"/>
+    <rect x="174" y="34" width="94" height="8" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+    <rect x="294" y="30" width="24" height="14" rx="7" fill="#906bff"/>
+    <circle cx="312" cy="37" r="5" fill="#ffffff"/>
+
+    <rect x="166" y="62" width="160" height="36" rx="8" fill="#1a1724"/>
+    <rect x="174" y="76" width="80" height="8" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+    <rect x="294" y="72" width="24" height="14" rx="7" fill="#2a2635"/>
+    <circle cx="302" cy="79" r="5" fill="#ffffff" fill-opacity="0.75"/>
+
+    <rect x="166" y="104" width="160" height="36" rx="8" fill="#1a1724"/>
+    <rect x="174" y="118" width="110" height="8" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+    <rect x="294" y="114" width="24" height="14" rx="7" fill="#906bff"/>
+    <circle cx="312" cy="121" r="5" fill="#ffffff"/>
+
+    <rect x="166" y="146" width="160" height="36" rx="8" fill="#1a1724"/>
+    <rect x="174" y="160" width="70" height="8" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+    <rect x="294" y="156" width="24" height="14" rx="7" fill="#2a2635"/>
+    <circle cx="302" cy="163" r="5" fill="#ffffff" fill-opacity="0.75"/>
+
+    <rect x="166" y="188" width="160" height="60" rx="8" fill="#1a1724"/>
+    <rect x="174" y="202" width="90" height="8" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+    <rect x="174" y="222" width="140" height="4" rx="2" fill="#2a2635"/>
+    <rect x="174" y="222" width="56" height="4" rx="2" fill="#906bff"/>
+  </g>
+
+  <!-- Purple spotlight behind the title -->
+  <ellipse cx="640" cy="200" rx="520" ry="180" fill="url(#spot)"/>
+
+  <!-- Logo mark + wordmark, centered above the headline -->
+  <g transform="translate(640 120)" text-anchor="middle">
+    <!-- Dot -->
+    <circle cx="-82" cy="-6" r="8" fill="#906bff"/>
+    <circle cx="-82" cy="-6" r="8" fill="#ffffff" fill-opacity="0.05"/>
+    <!-- Wordmark -->
+    <text x="-68" y="0" text-anchor="start" font-size="15" font-weight="500" fill="#c7bbf5" letter-spacing="0.2">
+      RepoCheatMenu
+    </text>
+  </g>
+
+  <!-- Headline, thin and large (BV-style) -->
+  <g text-anchor="middle" fill="#f3f1f8">
+    <text x="640" y="226" font-size="72" font-weight="200" letter-spacing="-2">
+      Призрак. Блоки. <tspan font-weight="300">Один мод.</tspan>
+    </text>
+  </g>
+
+  <!-- Subtitle -->
+  <text x="640" y="282" text-anchor="middle" font-size="18" font-weight="400" fill="#8a8fa0" letter-spacing="0.2">
+    <tspan font-weight="500" fill="#c0c3cd">RepoCheatMenu</tspan>
+    — вспомогательный мод для R.E.P.O., собранный под себя.
+  </text>
+</svg>

@@ -1,197 +1,110 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400" font-family="-apple-system, system-ui, 'Segoe UI', 'Inter', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400"
+     font-family="-apple-system, 'SF Pro Display', 'Inter', system-ui, 'Segoe UI', sans-serif">
   <defs>
-    <!-- Background: deep purple to near-black diagonal -->
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0e0b14"/>
-      <stop offset="0.55" stop-color="#141019"/>
-      <stop offset="1" stop-color="#1c1725"/>
+    <!-- Deep near-black with the faintest blue bias -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a0d13"/>
+      <stop offset="1" stop-color="#070a11"/>
     </linearGradient>
-    <!-- Soft purple glow on the right -->
-    <radialGradient id="glowR" cx="0.78" cy="0.42" r="0.55">
-      <stop offset="0" stop-color="#906bff" stop-opacity="0.42"/>
-      <stop offset="0.5" stop-color="#906bff" stop-opacity="0.12"/>
+
+    <!-- Grid that fades out toward the sides -->
+    <pattern id="grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="gridMask" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0" stop-color="#fff" stop-opacity="1"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="gridFade">
+      <rect width="1280" height="400" fill="url(#gridMask)"/>
+    </mask>
+
+    <!-- Soft purple spotlight behind the title, same accent as the mod's own menu -->
+    <radialGradient id="spot" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#906bff" stop-opacity="0.18"/>
       <stop offset="1" stop-color="#906bff" stop-opacity="0"/>
     </radialGradient>
-    <!-- Softer cyan glow on the top-left -->
-    <radialGradient id="glowL" cx="0.08" cy="0.1" r="0.4">
-      <stop offset="0" stop-color="#4bc0ff" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#4bc0ff" stop-opacity="0"/>
-    </radialGradient>
-    <!-- Vertical dim on the title area -->
-    <linearGradient id="scrim" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#000" stop-opacity="0.35"/>
-      <stop offset="0.6" stop-color="#000" stop-opacity="0.0"/>
-    </linearGradient>
-    <!-- Noise/grain overlay via tiny circles would be heavy; use SVG filter instead -->
-    <filter id="grain" x="0" y="0" width="1" height="1">
-      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7"/>
-      <feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.04 0"/>
+
+    <!-- Blur used on the decorative menu mock on the left -->
+    <filter id="blur" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="4"/>
     </filter>
-    <!-- Clip for the ghost silhouette -->
-    <clipPath id="ghostClip">
-      <path d="M 920 110
-               C 860 110, 820 160, 820 220
-               L 820 320
-               Q 820 332, 833 330
-               Q 843 321, 853 330
-               Q 863 321, 873 330
-               Q 883 321, 893 330
-               Q 903 321, 913 330
-               Q 923 321, 933 330
-               Q 943 321, 953 330
-               Q 963 321, 973 330
-               Q 983 321, 993 330
-               Q 1003 321, 1013 330
-               Q 1023 321, 1033 330
-               Q 1043 321, 1053 330
-               Q 1063 321, 1073 330
-               Q 1083 321, 1093 330
-               Q 1103 321, 1113 330
-               Q 1123 321, 1133 330
-               Q 1143 321, 1153 330
-               Q 1163 321, 1173 330
-               Q 1183 321, 1193 330
-               Q 1203 321, 1213 330
-               Q 1226 332, 1226 320
-               L 1226 220
-               C 1226 160, 1186 110, 1126 110
-               Z"/>
-    </clipPath>
   </defs>
 
-  <!-- Base background -->
+  <!-- Base -->
   <rect width="1280" height="400" fill="url(#bg)"/>
+  <!-- Grid, faded at edges -->
+  <rect width="1280" height="400" fill="url(#grid)" mask="url(#gridFade)"/>
 
-  <!-- Grid dots -->
-  <g fill="#ffffff" fill-opacity="0.035">
-    <!-- Hand-placed dot grid, 48px step -->
-    <circle cx="48" cy="48" r="1.5"/>  <circle cx="96" cy="48" r="1.5"/>  <circle cx="144" cy="48" r="1.5"/>
-    <circle cx="192" cy="48" r="1.5"/> <circle cx="240" cy="48" r="1.5"/> <circle cx="288" cy="48" r="1.5"/>
-    <circle cx="48" cy="96" r="1.5"/>  <circle cx="96" cy="96" r="1.5"/>  <circle cx="144" cy="96" r="1.5"/>
-    <circle cx="192" cy="96" r="1.5"/> <circle cx="240" cy="96" r="1.5"/> <circle cx="288" cy="96" r="1.5"/>
-    <circle cx="48" cy="144" r="1.5"/> <circle cx="96" cy="144" r="1.5"/> <circle cx="144" cy="144" r="1.5"/>
-    <circle cx="192" cy="144" r="1.5"/><circle cx="240" cy="144" r="1.5"/><circle cx="288" cy="144" r="1.5"/>
-    <circle cx="48" cy="192" r="1.5"/> <circle cx="96" cy="192" r="1.5"/> <circle cx="144" cy="192" r="1.5"/>
-    <circle cx="192" cy="192" r="1.5"/><circle cx="240" cy="192" r="1.5"/><circle cx="288" cy="192" r="1.5"/>
-    <circle cx="48" cy="240" r="1.5"/> <circle cx="96" cy="240" r="1.5"/> <circle cx="144" cy="240" r="1.5"/>
-    <circle cx="192" cy="240" r="1.5"/><circle cx="240" cy="240" r="1.5"/><circle cx="288" cy="240" r="1.5"/>
-    <circle cx="48" cy="288" r="1.5"/> <circle cx="96" cy="288" r="1.5"/> <circle cx="144" cy="288" r="1.5"/>
-    <circle cx="192" cy="288" r="1.5"/><circle cx="240" cy="288" r="1.5"/><circle cx="288" cy="288" r="1.5"/>
-    <circle cx="48" cy="336" r="1.5"/> <circle cx="96" cy="336" r="1.5"/> <circle cx="144" cy="336" r="1.5"/>
-    <circle cx="192" cy="336" r="1.5"/><circle cx="240" cy="336" r="1.5"/><circle cx="288" cy="336" r="1.5"/>
+  <!-- Decorative "menu" mock on the far left, blurred, slightly tilted -->
+  <g transform="translate(-70 65) rotate(-6)" filter="url(#blur)" opacity="0.9">
+    <!-- Panel -->
+    <rect x="0" y="0" width="340" height="280" rx="14" fill="#13111a" stroke="#2a2635" stroke-width="1"/>
+    <!-- Rail (category icons) -->
+    <rect x="0" y="0" width="56" height="280" rx="14" fill="#0f0d14"/>
+    <circle cx="28" cy="34" r="8" fill="#906bff" fill-opacity="0.9"/>
+    <circle cx="28" cy="68" r="6" fill="#ffffff" fill-opacity="0.25"/>
+    <circle cx="28" cy="102" r="6" fill="#ffffff" fill-opacity="0.25"/>
+    <circle cx="28" cy="136" r="6" fill="#ffffff" fill-opacity="0.25"/>
+    <circle cx="28" cy="170" r="6" fill="#ffffff" fill-opacity="0.25"/>
+    <!-- Tabs column -->
+    <rect x="72" y="20" width="84" height="12" rx="3" fill="#ffffff" fill-opacity="0.18"/>
+    <rect x="72" y="42" width="68" height="10" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+    <rect x="72" y="60" width="76" height="10" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+    <rect x="72" y="78" width="60" height="10" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+    <rect x="72" y="96" width="80" height="10" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+    <rect x="72" y="114" width="64" height="10" rx="3" fill="#ffffff" fill-opacity="0.1"/>
+    <!-- Settings panel: switch rows -->
+    <rect x="166" y="20" width="160" height="36" rx="8" fill="#1a1724"/>
+    <rect x="174" y="34" width="94" height="8" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+    <rect x="294" y="30" width="24" height="14" rx="7" fill="#906bff"/>
+    <circle cx="312" cy="37" r="5" fill="#ffffff"/>
+
+    <rect x="166" y="62" width="160" height="36" rx="8" fill="#1a1724"/>
+    <rect x="174" y="76" width="80" height="8" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+    <rect x="294" y="72" width="24" height="14" rx="7" fill="#2a2635"/>
+    <circle cx="302" cy="79" r="5" fill="#ffffff" fill-opacity="0.75"/>
+
+    <rect x="166" y="104" width="160" height="36" rx="8" fill="#1a1724"/>
+    <rect x="174" y="118" width="110" height="8" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+    <rect x="294" y="114" width="24" height="14" rx="7" fill="#906bff"/>
+    <circle cx="312" cy="121" r="5" fill="#ffffff"/>
+
+    <rect x="166" y="146" width="160" height="36" rx="8" fill="#1a1724"/>
+    <rect x="174" y="160" width="70" height="8" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+    <rect x="294" y="156" width="24" height="14" rx="7" fill="#2a2635"/>
+    <circle cx="302" cy="163" r="5" fill="#ffffff" fill-opacity="0.75"/>
+
+    <rect x="166" y="188" width="160" height="60" rx="8" fill="#1a1724"/>
+    <rect x="174" y="202" width="90" height="8" rx="3" fill="#ffffff" fill-opacity="0.22"/>
+    <rect x="174" y="222" width="140" height="4" rx="2" fill="#2a2635"/>
+    <rect x="174" y="222" width="56" height="4" rx="2" fill="#906bff"/>
   </g>
 
-  <!-- Glows -->
-  <rect width="1280" height="400" fill="url(#glowL)"/>
-  <rect width="1280" height="400" fill="url(#glowR)"/>
+  <!-- Purple spotlight behind the title -->
+  <ellipse cx="640" cy="200" rx="520" ry="180" fill="url(#spot)"/>
 
-  <!-- Soft ghost silhouette on the right -->
-  <g opacity="0.75">
-    <!-- Ghost body (purple glass) -->
-    <path d="M 920 110
-             C 860 110, 820 160, 820 220
-             L 820 320
-             Q 820 332, 833 330
-             Q 843 321, 853 330
-             Q 863 321, 873 330
-             Q 883 321, 893 330
-             Q 903 321, 913 330
-             Q 923 321, 933 330
-             Q 943 321, 953 330
-             Q 963 321, 973 330
-             Q 983 321, 993 330
-             Q 1003 321, 1013 330
-             Q 1023 321, 1033 330
-             Q 1043 321, 1053 330
-             Q 1063 321, 1073 330
-             Q 1083 321, 1093 330
-             Q 1103 321, 1113 330
-             Q 1123 321, 1133 330
-             Q 1143 321, 1153 330
-             Q 1163 321, 1173 330
-             Q 1183 321, 1193 330
-             Q 1203 321, 1213 330
-             Q 1226 332, 1226 320
-             L 1226 220
-             C 1226 160, 1186 110, 1126 110
-             Z"
-          fill="#2a1f3a" stroke="#906bff" stroke-width="1.5" stroke-opacity="0.55"/>
-    <!-- Eyes -->
-    <ellipse cx="1000" cy="200" rx="12" ry="18" fill="#1a1522"/>
-    <ellipse cx="1050" cy="200" rx="12" ry="18" fill="#1a1522"/>
-    <!-- Mouth: small O -->
-    <ellipse cx="1025" cy="248" rx="7" ry="10" fill="#1a1522"/>
-    <!-- Mic indicator (that's what the mod is about now) -->
-    <circle cx="1100" cy="155" r="18" fill="none" stroke="#4bc0ff" stroke-width="2.5" stroke-opacity="0.9"/>
-    <rect x="1092" y="140" width="16" height="22" rx="8" fill="#4bc0ff" fill-opacity="0.9"/>
-    <path d="M 1082 160 Q 1100 180, 1118 160" stroke="#4bc0ff" stroke-width="2" fill="none"/>
-    <line x1="1100" y1="172" x2="1100" y2="182" stroke="#4bc0ff" stroke-width="2"/>
+  <!-- Logo mark + wordmark, centered above the headline -->
+  <g transform="translate(640 120)" text-anchor="middle">
+    <!-- Dot -->
+    <circle cx="-82" cy="-6" r="8" fill="#906bff"/>
+    <circle cx="-82" cy="-6" r="8" fill="#ffffff" fill-opacity="0.05"/>
+    <!-- Wordmark -->
+    <text x="-68" y="0" text-anchor="start" font-size="15" font-weight="500" fill="#c7bbf5" letter-spacing="0.2">
+      RepoCheatMenu
+    </text>
   </g>
 
-  <!-- Vertical scrim behind title for contrast -->
-  <rect width="760" height="400" fill="url(#scrim)"/>
-
-  <!-- Accent pill: version chip -->
-  <g transform="translate(80 90)">
-    <rect x="0" y="0" width="118" height="26" rx="13" fill="#906bff" fill-opacity="0.18" stroke="#906bff" stroke-opacity="0.55"/>
-    <circle cx="14" cy="13" r="4" fill="#62ff00"/>
-    <text x="26" y="18" font-size="13" font-weight="600" fill="#e4defa" letter-spacing="0.5">v1.0.112 · PRIVATE</text>
+  <!-- Headline, thin and large (BV-style) -->
+  <g text-anchor="middle" fill="#f3f1f8">
+    <text x="640" y="226" font-size="72" font-weight="200" letter-spacing="-2">
+      Призрак. Блоки. <tspan font-weight="300">Один мод.</tspan>
+    </text>
   </g>
 
-  <!-- Title -->
-  <text x="80" y="200" font-size="88" font-weight="800" fill="#ffffff" letter-spacing="-2">
-    RepoCheatMenu
+  <!-- Subtitle -->
+  <text x="640" y="282" text-anchor="middle" font-size="18" font-weight="400" fill="#8a8fa0" letter-spacing="0.2">
+    <tspan font-weight="500" fill="#c0c3cd">RepoCheatMenu</tspan>
+    — вспомогательный мод для R.E.P.O., собранный под себя.
   </text>
-
-  <!-- Subtitle: feature line -->
-  <text x="80" y="248" font-size="22" font-weight="600" fill="#c7bbf5" letter-spacing="0.3">
-    Вспомогательный мод для <tspan fill="#ffffff" font-weight="700">R.E.P.O.</tspan>
-  </text>
-
-  <!-- Feature chips row -->
-  <g transform="translate(80 282)" font-size="12" font-weight="600" fill="#e4defa">
-    <!-- Призрак -->
-    <g>
-      <rect x="0" y="0" width="88" height="22" rx="11" fill="#ffffff" fill-opacity="0.08"/>
-      <text x="12" y="15">Призрак</text>
-    </g>
-    <!-- Блоки -->
-    <g transform="translate(96 0)">
-      <rect x="0" y="0" width="74" height="22" rx="11" fill="#ffffff" fill-opacity="0.08"/>
-      <text x="12" y="15">Блоки</text>
-    </g>
-    <!-- HUD -->
-    <g transform="translate(178 0)">
-      <rect x="0" y="0" width="60" height="22" rx="11" fill="#ffffff" fill-opacity="0.08"/>
-      <text x="12" y="15">HUD</text>
-    </g>
-    <!-- ESP -->
-    <g transform="translate(246 0)">
-      <rect x="0" y="0" width="56" height="22" rx="11" fill="#ffffff" fill-opacity="0.08"/>
-      <text x="12" y="15">ESP</text>
-    </g>
-    <!-- Телекинез -->
-    <g transform="translate(310 0)">
-      <rect x="0" y="0" width="102" height="22" rx="11" fill="#ffffff" fill-opacity="0.08"/>
-      <text x="12" y="15">Телекинез</text>
-    </g>
-    <!-- Невидимка -->
-    <g transform="translate(420 0)">
-      <rect x="0" y="0" width="100" height="22" rx="11" fill="#ffffff" fill-opacity="0.08"/>
-      <text x="12" y="15">Невидимка</text>
-    </g>
-    <!-- Полёт -->
-    <g transform="translate(528 0)">
-      <rect x="0" y="0" width="64" height="22" rx="11" fill="#ffffff" fill-opacity="0.08"/>
-      <text x="12" y="15">Полёт</text>
-    </g>
-  </g>
-
-  <!-- Footer tag -->
-  <text x="80" y="352" font-size="13" font-weight="500" fill="#8679a7" letter-spacing="0.3">
-    by Kolya · приватный репозиторий · личный проект
-  </text>
-
-  <!-- Grain overlay -->
-  <rect width="1280" height="400" filter="url(#grain)"/>
 </svg>

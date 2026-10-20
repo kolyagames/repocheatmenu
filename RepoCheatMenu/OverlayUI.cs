@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System;
 using System.Collections.Generic;
 using BepInEx.Configuration;
@@ -34,6 +42,20 @@ internal static class OverlayUI
     private static bool _repeatStarted;
     private static Action _activeKeybindRefresh;
     private static readonly List<(Text Label, Func<string> Source)> _liveTexts = new();
+
+    // Which sub-tab (AddSubTabs) is open within a given top-level tab - one field per tab that
+    // actually uses sub-tabs, kept outside the rebuilt rows for the same reason _scriptDraft is
+    // (SelectTab reruns the whole tab builder on every click, including a sub-tab click).
+    private static int _movementSubTab;
+    private static int _visualSubTab;
+    private static int _playerSubTab;
+    private static int _worldSubTab;
+    private static int _playersSubTab;
+    private static int _raidSubTab;
+    private static int _cosmeticSubTab;
+    private static int _miscSubTab;
+    private static int _trollSubTab;
+    private static int _hudSubTab;
 
     // Scripts tab state - kept outside the rebuilt row GameObjects (SelectTab destroys and
     // rebuilds every row in the tab on each visit/refresh) so the draft text and last
@@ -327,7 +349,7 @@ internal static class OverlayUI
         accentLe.preferredWidth = 4;
         accentLe.preferredHeight = 24;
 
-        var title = CreateText(headerGo.transform, "REPO ЧИТ-МЕНЮ   <size=12><color=#9A9AA6>тащить за шапку  •  средняя кнопка мыши по строке = бинд, Esc = снять</color></size>", 18, TextAnchor.MiddleLeft, new Color(1f, 1f, 1f, 0.92f));
+        var title = CreateText(headerGo.transform, "REPO МЕНЮ МОДА   <size=12><color=#9A9AA6>тащить за шапку  •  средняя кнопка мыши по строке = бинд, Esc = снять</color></size>", 18, TextAnchor.MiddleLeft, new Color(1f, 1f, 1f, 0.92f));
         title.fontStyle = FontStyle.Bold;
         var titleLe = title.gameObject.AddComponent<LayoutElement>();
         titleLe.flexibleWidth = 1;
@@ -427,44 +449,72 @@ internal static class OverlayUI
     {
         AddTab("Игрок", () =>
         {
+            AddSubTabs(new (string, Action)[]
+            {
+            ("Выживание", () =>
+            {
             AddToggleRow("Режим бога (полный игнор входящего урона)", CheatState.GodMode);
             AddButtonRow("Лечение (работает у гостя)", "Лечить", HealHack.HealFull);
+            AddToggleRow("Бесконечные батарейки (фонарик и голова не садятся)", CheatState.InfiniteBatteries);
+            AddToggleRow("Обход MasterOnlyRPC для себя (нужен гостю для возрождения себя ниже)", CheatState.MasterRpcSelfBypass);
+            AddButtonRow("Возрождение себя (хост - сразу; гость - голова в точку выхода/грузовик, оживит игра)", "Возродиться", ReviveHack.ReviveSelf);
+            AddButtonRow("Мгновенная смерть себе", "Убить себя", InstantKillHack.KillSelf);
+            }),
+            ("Сила", () =>
+            {
             AddToggleRow("Высокая сила (сила хвата/броска - реально работает только у хоста/соло)", CheatState.HighStrength);
             AddIntStepperRow("Уровень силы", CheatState.StrengthLevel, 1, 50, 1);
             AddToggleRow("Живой оверрайд силы (без потолка апгрейдов, через OverrideGrabStrength)", CheatState.StrengthOverrideMode);
             AddFloatStepperRow("Значение оверрайда силы", CheatState.StrengthOverrideValue, 1f, 50f, 1f);
+            AddToggleRow("Мощный хват (работает у гостя)", CheatState.PowerGrab);
+            }),
+            ("Хват", () =>
+            {
             AddToggleRow("Безлимитная дальность хвата (работает и у гостя)", CheatState.UnlimitedGrabRange);
             AddIntStepperRow("Уровень дальности хвата", CheatState.GrabRangeLevel, 1, 50, 1);
             AddToggleRow("Хват сквозь стены (луч хвата бьёт через препятствия)", CheatState.GrabThroughWalls);
             AddToggleRow("Без перегрузки хвата (блокирует штраф за перегруз)", CheatState.NoOvercharge);
-            AddToggleRow("Бесконечные батарейки (фонарик и голова не садятся)", CheatState.InfiniteBatteries);
-            AddToggleRow("Мощный хват (работает у гостя)", CheatState.PowerGrab);
             AddToggleRow("Мягкий сброс (без броска при отпускании - только хост/соло)", CheatState.GentleDrop);
-            AddToggleRow("Обход MasterOnlyRPC для себя (нужен гостю для возрождения себя ниже)", CheatState.MasterRpcSelfBypass);
-            AddButtonRow("Возрождение себя (гостю нужен тоггл выше, хосту не нужен)", "Возродиться", ReviveHack.ReviveSelf);
-            AddButtonRow("Мгновенная смерть себе", "Убить себя", InstantKillHack.KillSelf);
+            }),
+            }, () => _playerSubTab, v => _playerSubTab = v);
         });
 
         AddTab("Движение", () =>
         {
-            AddToggleRow("Бесконечная выносливость (стамина не тратится)", CheatState.InfiniteStamina);
-            AddFloatStepperRow("Скорость ходьбы x", CheatState.SpeedMultiplier, 0.5f, 6f, 0.1f);
-            AddFloatStepperRow("Скорость бега x", CheatState.SprintSpeedMultiplier, 0.5f, 6f, 0.1f);
-            AddFloatStepperRow("Скорость в приседе x", CheatState.CrouchSpeedMultiplier, 0.5f, 6f, 0.1f);
-            AddToggleRow("Бесконечные прыжки (двойной/тройной прыжок без апгрейда)", CheatState.InfiniteJumps);
-            AddFloatStepperRow("Сила прыжка x", CheatState.JumpMultiplier, 1f, 5f, 0.25f);
-            AddToggleRow("Без нокдауна (не улетаете в тумбл от ударов)", CheatState.NoKnockdown);
-            AddToggleRow("Без урона от падения (высота не считается)", CheatState.NoFallDamage);
-            AddToggleRow("Анти-отбрасывание (блок толчков от ударов/взрывов)", CheatState.AntiKnockback);
-            AddToggleRow("Страфы (одинаковая скорость + буст в любую сторону)", CheatState.Strafe);
-            AddFloatStepperRow("Множитель страфа", CheatState.StrafeMultiplier, 1f, 3f, 0.1f);
-            AddToggleRow("Полёт (отключает гравитацию, летите камерой, сквозь стены тоже)", CheatState.Fly);
-            AddFloatStepperRow("Скорость полёта", CheatState.FlySpeed, 2f, 50f, 1f);
-            AddToggleRow("Спринт удваивает скорость полёта", CheatState.FlySprintBoost);
-            AddToggleRow("Ноуклип (провалиться сквозь пол, без полёта)", CheatState.Noclip);
-            AddToggleRow("Движение мёртвым (до возрождения; двигает вашу голову, камера сама следует)", CheatState.DeadFly);
-            AddFloatStepperRow("Скорость движения мёртвым", CheatState.DeadFlySpeed, 2f, 50f, 1f);
-            AddToggleRow("Режим Колобка (авто-прыжки после смерти)", CheatState.KolobokMode);
+            AddSubTabs(new (string, Action)[]
+            {
+                ("Скорость", () =>
+                {
+                    AddToggleRow("Бесконечная выносливость (стамина не тратится)", CheatState.InfiniteStamina);
+                    AddFloatStepperRow("Скорость ходьбы x", CheatState.SpeedMultiplier, 0.5f, 6f, 0.1f);
+                    AddFloatStepperRow("Скорость бега x", CheatState.SprintSpeedMultiplier, 0.5f, 6f, 0.1f);
+                    AddFloatStepperRow("Скорость в приседе x", CheatState.CrouchSpeedMultiplier, 0.5f, 6f, 0.1f);
+                }),
+                ("Bhop", () =>
+                {
+                    AddToggleRow("Бесконечные прыжки (двойной/тройной прыжок без апгрейда)", CheatState.InfiniteJumps);
+                    AddFloatStepperRow("Сила прыжка x", CheatState.JumpMultiplier, 1f, 5f, 0.25f);
+                    AddToggleRow("Страфы (одинаковая скорость + буст в любую сторону)", CheatState.Strafe);
+                    AddFloatStepperRow("Множитель страфа", CheatState.StrafeMultiplier, 1f, 3f, 0.1f);
+                }),
+                ("Защита", () =>
+                {
+                    AddToggleRow("Без нокдауна (не улетаете в тумбл от ударов)", CheatState.NoKnockdown);
+                    AddToggleRow("Без урона от падения (высота не считается)", CheatState.NoFallDamage);
+                    AddToggleRow("Анти-отбрасывание (блок толчков от ударов/взрывов)", CheatState.AntiKnockback);
+                }),
+                ("Полёт", () =>
+                {
+                    AddToggleRow("Полёт (отключает гравитацию, летите камерой, сквозь стены тоже)", CheatState.Fly);
+                    AddFloatStepperRow("Скорость полёта", CheatState.FlySpeed, 2f, 50f, 1f);
+                    AddToggleRow("Спринт удваивает скорость полёта", CheatState.FlySprintBoost);
+                    AddToggleRow("Прятать от других во время полёта/ноуклипа (как Невидимка, голос будет далёким)", CheatState.FlyAutoHide);
+                    AddToggleRow("Ноуклип (провалиться сквозь пол, без полёта)", CheatState.Noclip);
+                    AddToggleRow("Движение мёртвым (до возрождения; двигает вашу голову, камера сама следует)", CheatState.DeadFly);
+                    AddFloatStepperRow("Скорость движения мёртвым", CheatState.DeadFlySpeed, 2f, 50f, 1f);
+                    AddToggleRow("Режим Колобка (авто-прыжки после смерти)", CheatState.KolobokMode);
+                }),
+            }, () => _movementSubTab, v => _movementSubTab = v);
         });
 
         // New tab, split out of "Визуал" - groups everything that moves the render camera itself,
@@ -479,6 +529,11 @@ internal static class OverlayUI
             AddFloatStepperRow("Смещение вбок", CheatState.ThirdPersonHorizontal, -2f, 2f, 0.25f);
             AddFloatStepperRow("Плавность (меньше = плавнее/с задержкой)", CheatState.ThirdPersonSmoothness, 1f, 30f, 1f);
             AddFloatStepperRow("Масштаб своей модели (косметика)", CheatState.ThirdPersonModelScale, 0.1f, 3f, 0.1f);
+            AddSectionHeader("Скриншоты и фото-режим");
+            AddButtonRow("Скриншот без интерфейса (сохраняется в Изображения\\REPO)", "Снять", PhotoModeHack.TakeScreenshot);
+            AddToggleRow("Фото-режим: скрыть весь интерфейс игры и мода (кроме открытого меню)", CheatState.PhotoMode);
+            AddToggleRow("Режим стримера: ники других игроков в HUD, ESP, пингах и оповещениях заменяются на «Игрок N» (в списках меню остаются)", CheatState.StreamerMode);
+            AddLiveInfoRow(() => string.IsNullOrEmpty(PhotoModeHack.LastShot) ? "Повесьте «Снять» и фото-режим на клавиши средним кликом." : "Последний: " + PhotoModeHack.LastShot);
             AddLiveInfoRow(() => "Камера плавно тянется к цели вместо мгновенного прыжка - тот же " +
                 "\"смуз-камера\" приём, что в визуальных клиентах Minecraft. Заодно убирает " +
                 "дёрганье на большой дистанции у стен: SphereCast-проверка стен пересчитывается " +
@@ -494,30 +549,87 @@ internal static class OverlayUI
 
         AddTab("Визуал", () =>
         {
-            AddToggleRow("ESP игроков (видно сквозь стены)", CheatState.EspPlayers);
-            AddToggleRow("  -> Экипировка тиммейтов (что держат в руках)", CheatState.EspLoadout);
-            AddToggleRow("ESP врагов (видно сквозь стены)", CheatState.EspEnemies);
-            AddToggleRow("ESP ценностей (цена и позиция сквозь стены)", CheatState.EspValuables);
-            AddToggleRow("ESP точек эвакуации (статус: ожидание/активна)", CheatState.EspExtractionPoints);
-            AddIntStepperRow("Макс. дистанция ESP (м)", CheatState.EspMaxDistance, 5, 200, 5);
-            AddToggleRow("Режим силуэта (заливка цветом сквозь стены)", CheatState.EspShaderMode);
-            AddColorCycleRow("Цвет ESP", CheatState.EspColor);
-            AddToggleRow("Радужный режим ESP (перебирает цвета по кругу)", CheatState.EspRainbow);
-            AddToggleRow("Улучшенное зрение (дальше видно, без темноты)", CheatState.BetterVision);
-            AddIntStepperRow("Угол обзора (FOV)", CheatState.Fov, 60, 140, 5);
-            AddIntStepperRow("Яркость фонарика", CheatState.FlashlightIntensity, 1, 30, 1);
-            AddIntStepperRow("Угол луча фонарика", CheatState.FlashAngle, 10, 170, 5);
-            AddToggleRow("Фонарик не гаснет в приседе", CheatState.FlashInCrouch);
-            AddToggleRow("Цветной фонарик", CheatState.FlashlightColorEnabled);
-            AddColorCycleRow("Цвет фонарика", CheatState.FlashlightColorHex);
-            AddToggleRow("Радужный фонарик", CheatState.FlashlightColorRainbow);
-            AddToggleRow("Макс. заряд головы (при полёте призраком)", CheatState.MaxHeadBattery);
-            AddButtonRow("Экран загрузки", "Пропустить", LoadingHack.SkipNow);
-            AddToggleRow("Принудительный пропуск (мгновенно, рискованно - может рассинхронить других)", CheatState.LoadingForceSkip);
+            AddSubTabs(new (string, Action)[]
+            {
+                ("ESP", () =>
+                {
+                    AddCycleRow("Стиль подписей ESP: Rockstar (плашки) или классика", CheatState.EspStyle, new[] { "Rockstar", "Классика" });
+                    AddToggleRow("ESP ловушек (плашка на каждой ловушке уровня; только в стиле Rockstar)", CheatState.EspTraps);
+                    AddToggleRow("Маркеры над тиммейтами (зелёный кристалл над головой, как у Rockstar)", CheatState.FriendMarkers);
+                    AddToggleRow("Боксы ESP (3D-рамка вокруг игроков, врагов и ценностей)", CheatState.EspBoxes);
+                    AddCycleRow("  -> Режим боксов", CheatState.EspBoxMode, new[] { "Контур + заливка", "Контур", "Заливка" });
+                    AddToggleRow("Стрелки ESP (стрелка по краю прицела к игрокам и врагам вне экрана)", CheatState.EspArrows);
+                    AddToggleRow("Стрелки и для тех, кто на экране", CheatState.EspArrowsOnScreen);
+                    AddToggleRow("ESP игроков (видно сквозь стены)", CheatState.EspPlayers);
+                    AddToggleRow("  -> Экипировка тиммейтов (что держат в руках)", CheatState.EspLoadout);
+                    AddToggleRow("ESP врагов (видно сквозь стены)", CheatState.EspEnemies);
+                    AddToggleRow("ESP ценностей (цена и позиция сквозь стены)", CheatState.EspValuables);
+                    AddToggleRow("ESP точек эвакуации (статус: ожидание/активна)", CheatState.EspExtractionPoints);
+                    AddIntStepperRow("Макс. дистанция ESP (м)", CheatState.EspMaxDistance, 5, 200, 5);
+                    AddToggleRow("Режим силуэта (заливка цветом сквозь стены)", CheatState.EspShaderMode);
+                    AddColorCycleRow("Цвет ESP", CheatState.EspColor);
+                    AddToggleRow("Радужный режим ESP (перебирает цвета по кругу)", CheatState.EspRainbow);
+                }),
+                ("Фонарик", () =>
+                {
+                    AddIntStepperRow("Яркость фонарика", CheatState.FlashlightIntensity, 1, 30, 1);
+                    AddIntStepperRow("Угол луча фонарика", CheatState.FlashAngle, 10, 170, 5);
+                    AddToggleRow("Фонарик не гаснет в приседе", CheatState.FlashInCrouch);
+                    AddToggleRow("Цветной фонарик", CheatState.FlashlightColorEnabled);
+                    AddColorCycleRow("Цвет фонарика", CheatState.FlashlightColorHex);
+                    AddToggleRow("Радужный фонарик", CheatState.FlashlightColorRainbow);
+                    AddToggleRow("Макс. заряд головы (при полёте призраком)", CheatState.MaxHeadBattery);
+                }),
+                ("Зрение", () =>
+                {
+                    AddToggleRow("Улучшенное зрение (дальше видно, без темноты)", CheatState.BetterVision);
+                    AddIntStepperRow("Угол обзора (FOV)", CheatState.Fov, 60, 140, 5);
+                    AddToggleRow("Зум (сужает обзор; повесьте на клавишу средним кликом)", CheatState.Zoom);
+                    AddFloatStepperRow("  -> Угол зума (FOV)", CheatState.ZoomFov, 5f, 90f, 5f);
+                    AddToggleRow("Спокойная камера (без тряски, покачивания и рывка при беге)", CheatState.StableCamera);
+                }),
+                ("Эффекты", () =>
+                {
+                    AddToggleRow("Круги от прыжков (кольцо на полу там, где игрок оттолкнулся)", CheatState.JumpCircles);
+                    AddIntStepperRow("  -> Радиус кругов (см)", CheatState.JumpCircleRadius, 50, 250, 25);
+                    AddToggleRow("Эффекты убийства (частицы или молния при смерти врага)", CheatState.KillFx);
+                    AddCycleRow("  -> Режим", CheatState.KillFxMode, new[] { "Частицы", "Молния" });
+                    AddCycleRow("  -> Физика частиц", CheatState.KillFxPhysics, new[] { "Разлёт", "Гравитация" });
+                    AddToggleRow("  -> Ещё и при смерти игроков", CheatState.KillFxPlayers);
+                    AddToggleRow("Метка цели (светящееся кольцо вокруг выбранного игрока)", CheatState.TargetFx);
+                    AddCycleRow("  -> Режим", CheatState.TargetFxMode, new[] { "Души", "Кристаллы", "Круг", "Желе" });
+                    AddToggleRow("  -> Если игрок не выбран - ближайший враг", CheatState.TargetFxEnemies);
+                    AddToggleRow("Цвет эффектов = цвет темы", CheatState.FxUseTheme);
+                    AddColorCycleRow("  -> Свой цвет", CheatState.FxColor);
+                    AddToggleRow("Свой туман", CheatState.CustomFog);
+                    AddFloatStepperRow("  -> Начало, м", CheatState.CustomFogStart, 0f, 100f, 1f);
+                    AddFloatStepperRow("  -> Конец, м", CheatState.CustomFogEnd, 2f, 200f, 1f);
+                    AddFloatStepperRow("  -> Сила оттенка, %", CheatState.CustomFogTint, 0f, 100f, 2f);
+                    AddCycleRow("Уведомления: плашки Rockstar или остров", CheatState.NotifyStyle, new[] { "Плашки", "Остров" });
+                }),
+                ("Оповещения", () =>
+                {
+                    AddToggleRow("Лобби: зашёл / вышел / погиб / возродился (всплывашка на острове)", CheatState.LobbyAlerts);
+                    AddToggleRow("Монстр рядом (всплывашка, когда враг ближе радиуса)", CheatState.EnemyAlert);
+                    AddFloatStepperRow("  -> Радиус, м", CheatState.EnemyAlertRange, 3f, 60f, 1f);
+                    AddToggleRow("Квота набрана (всплывашка)", CheatState.HaulAlert);
+                    AddToggleRow("Мало здоровья у вас или тиммейта (всплывашка)", CheatState.LowHealthAlert);
+                    AddIntStepperRow("  -> Порог, % здоровья", CheatState.LowHealthPercent, 5, 90, 5);
+                }),
+                ("Загрузка", () =>
+                {
+                    AddButtonRow("Экран загрузки", "Пропустить", LoadingHack.SkipNow);
+                    AddToggleRow("Принудительный пропуск (мгновенно, рискованно - может рассинхронить других)", CheatState.LoadingForceSkip);
+                }),
+            }, () => _visualSubTab, v => _visualSubTab = v);
         });
 
         AddTab("Мир", () =>
         {
+            AddSubTabs(new (string, Action)[]
+            {
+            ("Лут", () =>
+            {
             AddToggleRow("Автофарм (сам ходит, собирает и сдаёт лут - забирает управление и камеру)", CheatState.AutoFarm);
             AddToggleRow("Магнит лута (тянет ценности к эвакуации, ничего не ломается)", CheatState.LootMagnet);
             AddToggleRow("Бог-режим для ценностей (не бьются, только хост/сингл)", CheatState.ValuableGodMode);
@@ -526,6 +638,9 @@ internal static class OverlayUI
             AddToggleRow("Радар эвакуации (расстояние и направление)", CheatState.ExtractionRadar);
             AddToggleRow("Автозапуск эвакуации (не нужно жать кнопку)", CheatState.AutoActivateExtraction);
             AddItemSpawnerRow();
+            }),
+            ("Небьющиеся", () =>
+            {
             AddToggleRow("Без лимита времени хвата врагами", CheatState.NoGrabMaxTime);
             AddToggleRow("Небьющиеся ценности (не ломаются от ударов)", CheatState.Unbreakable);
 
@@ -546,10 +661,16 @@ internal static class OverlayUI
             AddToggleRow("Транспорт", CheatState.UnbreakableVehicle);
             AddToggleRow("Станции апгрейда предметов", CheatState.UnbreakableItemUpgrade);
             AddToggleRow("Станции апгрейда игрока", CheatState.UnbreakablePlayerUpgrade);
+            }),
+            ("Квота", () =>
+            {
             AddToggleRow("Бесплатная квота (у хоста/соло - мгновенно, у гостя - через спавн ценностей, не мгновенно)", CheatState.FreeQuota);
             AddToggleRow("Квота в 0 при загрузке уровня (ловит момент до синхронизации цели рана - работает и у гостя, и у хоста)", CheatState.QuotaZeroRace);
             AddToggleRow("Авто-скип в магазин при загрузке (только хост/соло - закрывает 1 квоту в 0 и сразу едет в магазин, вся комната)", CheatState.AutoSkipToShop);
             AddToggleRow("Безлимит перероллов апгрейдов (только хост/соло, цена настоящая)", CheatState.UnlimitedRerolls);
+            }),
+            ("Станция и смерть", () =>
+            {
             AddToggleRow("Лазерный прицел (на оружии в руках)", CheatState.UseLaser);
             AddToggleRow("Вибро-оружие (только хост/соло)", CheatState.MeleeVibrate);
             AddToggleRow("Вечная зарядная станция (не садится и не ломается)", CheatState.InfiniteChargingStation);
@@ -557,6 +678,8 @@ internal static class OverlayUI
             AddToggleRow("После смерти - голова летит к грузовику", CheatState.DeathAutoToTruck);
             AddToggleRow("После смерти - голова летит к ближайшей эвакуации", CheatState.DeathAutoToExtraction);
             AddToggleRow("Осколок с любой смерти (вашей или тиммейта)", CheatState.TeammateDeathDropBead);
+            }),
+            }, () => _worldSubTab, v => _worldSubTab = v);
         });
 
         // Everything that acts on other PEOPLE lives here now, in one place - it used to be split
@@ -566,6 +689,10 @@ internal static class OverlayUI
         // "Тролль" keeps the appearance spoofs, "Монстры" keeps the enemy tools.
         AddTab("Игроки", () =>
         {
+            AddSubTabs(new (string, Action)[]
+            {
+            ("Цель", () =>
+            {
             AddSectionHeader("Цель (работает с любой дистанции, не нужно подходить)");
             AddPlayerPickerRow("Цель (одна на все действия ниже)", CheatState.FakeSoundTargetName);
             AddButtonRow("Телепорт к цели (переместить себя)", "К цели", TeleportHack.TeleportToPlayer);
@@ -578,10 +705,27 @@ internal static class OverlayUI
             AddToggleRow("Кресельная чехарда (постоянно пересаживает цель по случайным местам)", CheatState.SeatShuffle);
             AddToggleRow("Приманка для монстра (натравливает реального врага на цель, выглядит естественно)", CheatState.MonsterBait);
             AddToggleRow("Спам-лечение (раздражающий экранный глитч на цели, безвредно)", CheatState.HealSpam);
+            AddToggleRow("Ловец игроков (сам хватает упавших в кувырок Q, через стены; штатный хват игры)", CheatState.PlayerCatcher);
+            AddFloatStepperRow("  -> Радиус, м", CheatState.PlayerCatcherRange, 2f, 100f, 2f);
+            AddFloatStepperRow("  -> Держать, сек (0 = пока не отпустите)", CheatState.PlayerCatcherHoldSeconds, 0f, 60f, 1f);
+            AddToggleRow("  -> Только выбранную цель", CheatState.PlayerCatcherTargetOnly);
+            AddLiveInfoRow(PlayerCatcherHack.Status);
             AddButtonRow("Возродить цель (реально только у хоста, у гостя иллюзия только на своём экране)", "Возродить", ReviveHack.ReviveOther);
             AddButtonRow("Мгновенная смерть цели (только хост, у гостя не сработает)", "Убить", InstantKillHack.KillOther);
             AddToggleRow("Авто-возрождение всех мёртвых (только хост/соло реально, у гостя иллюзия)", CheatState.AutoReviveTeammates);
 
+            }),
+            ("Steam-поиск", () =>
+            {
+            AddSectionHeader("Найти лобби по ссылке Steam-профиля");
+            AddTextFieldRow("Ссылка на профиль (…/profiles/… , …/id/… или SteamID64)", SteamProfileHunter.UrlInput);
+            AddButtonRow("Найти и зайти (сканирует открытые REPO-лобби)", "Найти", SteamProfileHunter.StartSearch);
+            AddLiveInfoRow(SteamProfileHunter.StatusLine);
+            AddLiveInfoRow(() => "  -> Работает по хосту открытых лобби. Если цель — гость, найдёт только когда она у вас в друзьях Steam (Rich Presence).");
+
+            }),
+            ("Лобби", () =>
+            {
             AddSectionHeader("Всё лобби разом");
             AddToggleRow("Заморозить всех (держит каждого ровно там, где он есть)", CheatState.FreezeAll);
             AddToggleRow("Клетка ВСЕМ (утаскивает всех под карту)", CheatState.PlayerCageAll);
@@ -594,12 +738,18 @@ internal static class OverlayUI
             AddButtonRow("Подстава ВСЕМ продавцу (только в магазине)", "Подставить всех", MassRaidHack.FrameAllForShopKeeper);
             AddToggleRow("Казнь в магазине (по очереди; умер - выбыл, выжил - в конец очереди)", CheatState.ShopExecution);
 
+            }),
+            ("Из рук", () =>
+            {
             AddSectionHeader("Отобрать из рук");
             AddItemStealRow();
             AddToggleRow("Тотальный грабёж (без фильтра по имени - тащит всё подряд)", CheatState.StealAllHeldItems);
             AddButtonRow("Выбить всё из рук (у всех разом)", "Выбить", RaidHack.ForceDropAll);
             AddToggleRow("Тотальное разоружение (постоянно выбивает из рук у всех)", CheatState.MassDisarm);
 
+            }),
+            ("Магазин и арена", () =>
+            {
             AddSectionHeader("Арена (auto-win)");
             AddToggleRow("Auto-Win Арены (сбрасывает чужие карты с трассы, только Arena Race)", CheatState.ArenaSabotage);
             AddToggleRow("Auto-Win Арены с оружием (скидывает всех в яму, только режим с падающим полом)", CheatState.ArenaWeaponsSabotage);
@@ -616,6 +766,9 @@ internal static class OverlayUI
             AddButtonRow("Подстава за тычки (7 фейковых carry-thrust за раз)", "Тычки", RuckusFrameHack.CarryThrustFrame);
             AddToggleRow("Шторм тычков (продавец постоянно зол на всё лобби)", CheatState.CarryThrustStorm);
 
+            }),
+            ("Лишение вещей", () =>
+            {
             AddSectionHeader("Лишение вещей (новые дыры)");
             AddButtonRow("Обезоружить цель (роняет из рук + блок хвата на 4 сек)", "Обезоружить", GrabDenialHack.DisarmTarget);
             AddButtonRow("Обезоружить ВСЕХ", "Обезоружить всех", GrabDenialHack.DisarmAll);
@@ -633,6 +786,9 @@ internal static class OverlayUI
             AddToggleRow("Постоянный выжиг оружия (ни у кого нет заряженного оружия)", CheatState.WeaponDrainAll);
             AddButtonRow("ОБОБРАТЬ ЦЕЛЬ (слоты + руки + блок хвата + оружие разом)", "Обобрать", GrabDenialHack.StripTarget);
 
+            }),
+            ("Вблизи", () =>
+            {
             AddSectionHeader("Нокдаун вблизи (нужно подходить самому)");
             AddToggleRow("Рывок (нокдаун всех игроков по очереди)", CheatState.KnockdownAll);
             AddToggleRow("Нокдаун + Изгнание (режим 2 - утаскивает под карту)", CheatState.KnockdownBanish);
@@ -640,10 +796,16 @@ internal static class OverlayUI
 
             AddSectionHeader("Таран тележкой (эксперимент, не гарантирован)");
             AddToggleRow("Хватает ближайшую тележку и таранит ею цель (см. Цель выше)", CheatState.CartRam);
+            }),
+            }, () => _playersSubTab, v => _playersSubTab = v);
         });
 
         AddTab("Рейд", () =>
         {
+            AddSubTabs(new (string, Action)[]
+            {
+            ("Лут", () =>
+            {
             AddSectionHeader("Лут (осторожно - бьёт и по вашей же выручке)");
             AddButtonRow("Чистка предметов (разбрасывает весь шмот на уровне)", "Чистка", MassRaidHack.ItemPurge);
             AddButtonRow("Разброс тележек (раскидывает все тележки)", "Раскидать", MassRaidHack.CartYeetAll);
@@ -651,11 +813,17 @@ internal static class OverlayUI
             AddToggleRow("Уничтожить все ценности (кроме самых дешёвых, непрерывно)", CheatState.DestroyAllValuables);
             AddToggleRow("Разрушитель магазина 3000 (оружие/аптечки/всё - только в магазине)", CheatState.ShopDestroyer);
 
+            }),
+            ("Эвакуация", () =>
+            {
             AddSectionHeader("Эвакуация (новая дыра - выбор точки за всю команду)");
             AddButtonRow("Активировать ближайшую точку эвакуации", "Ближняя", WorldHolesHack2.ActivateNearestExtraction);
             AddButtonRow("Активировать САМУЮ ДАЛЬНЮЮ (остальные точки блокируются на раунд)", "Дальняя", WorldHolesHack2.ActivateFarthestExtraction);
             AddToggleRow("Перехват эвакуации (постоянно занимает худшую точку раньше всех)", CheatState.ExtractionSnipe);
 
+            }),
+            ("Карта и взрывы", () =>
+            {
             AddSectionHeader("Карта и взрывы");
             AddButtonRow("Раскрыть все ценности на карте (всем игрокам)", "Раскрыть", WorldHolesHack2.RevealAllValuables);
             AddToggleRow("Авто-раскрытие ценностей (по мере подгрузки уровня)", CheatState.AutoRevealValuables);
@@ -663,13 +831,23 @@ internal static class OverlayUI
             AddButtonRow("Взрыв по всем разом", "Взрыв всем", WorldHolesHack2.StrikeEveryone);
             AddToggleRow("Шторм взрывов (повторяет каждые ~4 сек, нужен живой снаряд)", CheatState.ProjectileStrikeStorm);
 
+            }),
+            ("Транспорт", () =>
+            {
             AddSectionHeader("Транспорт и застревания");
             AddButtonRow("Тряска всех машин (только визуал кузова и звук, езду не портит)", "Трясти", WorldHolesHack2.WobbleAllVehicles);
             AddButtonRow("Тряска машины цели (кузов дёргается и бренчит, физика не трогается)", "Трясти цель", WorldHolesHack2.WobbleTargetVehicle);
             AddToggleRow("Шторм тряски (непрерывный дребезг корпуса, чисто нервировать)", CheatState.VehicleWobbleStorm);
+            AddButtonRow("Гудок всех машин (работает у гостя; хост-игра зовёт монстров к машинам)", "Гудеть", HonkHack.HonkAll);
+            AddButtonRow("Гудок ближайшей машины", "Гудок", HonkHack.HonkNearest);
+            AddToggleRow("Шторм гудков (гудят все машины, монстры идут на звук)", CheatState.HonkStorm);
+            AddFloatStepperRow("  -> Интервал, сек", CheatState.HonkStormInterval, 0.2f, 10f, 0.2f);
             AddButtonRow("Сбросить толкатель всем (вытаскивает застрявших из геометрии)", "Сбросить", WorldHolesHack2.ResetAllPhysPushers);
             AddButtonRow("Сбросить толкатель цели", "Сбросить цель", WorldHolesHack2.ResetTargetPhysPusher);
 
+            }),
+            ("Уровень", () =>
+            {
             AddSectionHeader("Уровень");
             AddButtonRow("Снести все ловушки целиком (не только триггер)", "Снести", WorldHolesHack2.DestroyAllTrapsFully);
             AddButtonRow("Открыть все музыкальные шкатулки", "Открыть", WorldHolesHack2.TriggerAllMusicBoxes);
@@ -678,6 +856,10 @@ internal static class OverlayUI
             AddButtonRow("Обезвредить все ловушки на уровне", "Обезвредить", UtilityHolesHack.DisarmAllTraps);
             AddButtonRow("Переключить все рычаги/switches на уровне", "Переключить", UtilityHolesHack.ToggleAllSwitches);
             AddToggleRow("Запереть все двери (замыкает в текущем положении)", CheatState.LockAllDoors);
+            AddToggleRow("Чёрная дыра: весь лут и двери закручивает орбитой над центром карты", CheatState.BlackHole);
+            AddLiveInfoRow(BlackHoleHack.Status);
+            }),
+            }, () => _raidSubTab, v => _raidSubTab = v);
         });
 
         AddTab("Монстры", () =>
@@ -704,15 +886,31 @@ internal static class OverlayUI
 
         AddTab("Косметика", () =>
         {
+            AddSubTabs(new (string, Action)[]
+            {
+            ("Внешний вид", () =>
+            {
             AddValuableSpawnRow();
             AddToggleRow("Принудительные крылья (только визуал, апгрейд не нужен)", CheatState.ForceWings);
             AddToggleRow("Розовые крылья (второй из двух реальных цветов игры - видно другим)", CheatState.WingsPink);
             AddToggleRow("Цвет глаз (фикс. палитра - видно другим с этим же модом)", CheatState.EyeColor);
             AddCycleRow("Цвет глаз", CheatState.EyeColorName, CosmeticHack.EyeColorNames);
             AddToggleRow("Большие зрачки (видно другим с этим же модом)", CheatState.BigPupils);
+            AddToggleRow("Эффект глаз (игровой, поэтому видят ВСЕ - даже без мода)", CheatState.EyeOverride);
+            AddCycleRow("  -> Какой", CheatState.EyeOverrideState, EyeOverrideHack.StateNames);
+            AddToggleRow("Зафиксировать выражение лица (настоящая игровая фича, видно всем, не только с модом)", CheatState.ExpressionLock);
+            AddIntStepperRow("  -> Какое (1-6, как игровые клавиши выражений)", CheatState.ExpressionIndex, 1, 6, 1);
+            }),
+            ("Личность", () =>
+            {
             AddNameChangerRow();
+            AddButtonRow("Разблокировать ВСЕ косметики (правит сейв, будет бэкап; нажать дважды)", "Открыть всё", CosmeticUnlockHack.UnlockAll);
             AddToggleRow("Маскировка под хоста (авто, копирует ник хоста себе)", CheatState.MimicHostName);
             AddToggleRow("Маскировка скина под хоста (авто, копирует косметику и цвета)", CheatState.MimicHostSkin);
+            AddToggleRow("  -> Копировать выбранного игрока вместо хоста", CheatState.MimicFollowPicked);
+            AddButtonRow("Скопировать ник и скин выбранного игрока (разово)", "Копировать", CopyIdentityHack.CopyPicked);
+            }),
+            }, () => _cosmeticSubTab, v => _cosmeticSubTab = v);
         });
 
         // Split out into its own tab (2026-09-11) - was scattered inside "Прочее". Two different
@@ -721,18 +919,31 @@ internal static class OverlayUI
         // network).
         AddTab("Голос", () =>
         {
+            AddSectionHeader("Микрофон");
+            AddButtonRow("Выбрать физический микрофон (вместо виртуального Sonar/VB/Broadcast)", "Исправить", MicFixHack.PickButton);
+            AddLiveInfoRow(() => "  -> Unity видит: " + string.Join(" | ", UnityEngine.Microphone.devices));
+
             AddSectionHeader("Кого слышно вам (только локально, ни на что в сети не влияет)");
             AddCycleRow("Слышать (кого слышно: все / живые / мёртвые)", CheatState.VoiceFilter, new[] { "All", "Living", "Dead" });
             AddToggleRow("Чужие голоса (бурундуки/демоны - меняет высоту тона для вас)", CheatState.ChipmunkVoices);
             AddFloatStepperRow("  -> Высота тона (>1 выше, <1 ниже)", CheatState.ChipmunkPitch, 0.5f, 3f, 0.1f);
+            AddToggleRow("Слышать всех без затухания, когда вы мертвы или в «Призраке-наблюдателе»", CheatState.GhostHearAll);
 
             AddSectionHeader("Что слышат от вас другие (реально передаётся всем)");
+            AddToggleRow("Демонический голос (другие реально слышат вас замедленным, нужна транк-пушка в уровне)", CheatState.DemonVoice);
+            AddLiveInfoRow(() => !CheatState.DemonVoice.Value ? "  -> Выключено"
+                : DemonVoiceHack.HasGun ? "  -> Транк-пушка найдена, эффект идёт"
+                : "  -> В уровне нет транк-пушки: заспавните её во вкладке «Мир»");
             AddToggleRow("Лаганый голос (другие слышат заикания, а внешне вы обычный)", CheatState.GlitchyVoice);
             AddFloatStepperRow("  -> Длина рывка, сек (меньше = резче заикание)", CheatState.GlitchyVoiceInterval, 0.05f, 1f, 0.05f);
         });
 
         AddTab("Прочее", () =>
         {
+            AddSubTabs(new (string, Action)[]
+            {
+            ("Игра", () =>
+            {
             AddButtonRow("Публичная игра (точь-в-точь родная кнопка; только из главного меню)", "Найти", PublicGameHack.JoinRandomPublic);
             AddButtonRow("Сбросить регион на авто (если список серверов пустой из-за закреплённого региона)", "Сбросить", PublicGameHack.ResetToBestRegion);
             AddButtonRow("Форсировать WebSocket-протокол (если сеть режет UDP - долго/не грузится подключение)", "Форсировать", PublicGameHack.ForceWebSocketProtocol);
@@ -744,6 +955,63 @@ internal static class OverlayUI
             AddLevelLoaderRow();
             AddModuleLoaderRow();
 
+            }),
+            ("Пресеты", () =>
+            {
+            AddSectionHeader("Пресеты настроек (все настройки мода, включая HUD; клавиши - средний клик)");
+            AddButtonRow("Пресет 1: сохранить текущие настройки", "Сохранить", PresetsHack.Save1);
+            AddButtonRow("Пресет 1: загрузить", "Загрузить", PresetsHack.Load1);
+            AddButtonRow("Пресет 2: сохранить текущие настройки", "Сохранить", PresetsHack.Save2);
+            AddButtonRow("Пресет 2: загрузить", "Загрузить", PresetsHack.Load2);
+            AddButtonRow("Пресет 3: сохранить текущие настройки", "Сохранить", PresetsHack.Save3);
+            AddButtonRow("Пресет 3: загрузить", "Загрузить", PresetsHack.Load3);
+            AddButtonRow("Отменить последнюю загрузку / вставку / сброс", "Отменить", PresetsHack.Undo);
+            AddButtonRow("Скопировать текущие настройки в буфер (поделиться с другом)", "В буфер", PresetsHack.CopyToClipboard);
+            AddButtonRow("Вставить настройки из буфера обмена", "Вставить", PresetsHack.PasteFromClipboard);
+            AddButtonRow("Сбросить все настройки мода по умолчанию (нажать дважды)", "Сбросить", PresetsHack.ResetAll);
+            AddLiveInfoRow(() => PresetsHack.SlotInfo(1) + "\n" + PresetsHack.SlotInfo(2) + "\n" + PresetsHack.SlotInfo(3) +
+                (PresetsHack.LastMessage.Length > 0 ? "\nПоследнее: " + PresetsHack.LastMessage : ""));
+            AddSectionHeader("Резервные копии файла настроек (вместе с биндами; автоматически раз в день)");
+            AddButtonRow("Сделать копию сейчас", "Копия", ConfigBackup.BackupNow);
+            AddButtonRow("Вернуть последнюю копию (нажать дважды)", "Вернуть", ConfigBackup.RestoreLatest);
+            AddButtonRow("Отменить возврат копии", "Отменить", ConfigBackup.UndoRestore);
+            AddLiveInfoRow(ConfigBackup.Info);
+            AddSectionHeader("Назначенные клавиши (и конфликты: одна клавиша на несколько функций)");
+            AddLiveInfoRow(BindsOverview.Info);
+            AddButtonRow("Снять все клавиши (нажать дважды; перед этим делается копия настроек)", "Снять все", BindsOverview.ClearAll);
+            }),
+            ("Журнал", () =>
+            {
+            AddSectionHeader("Журнал забега: итог каждого уровня (хранится между сессиями)");
+            AddToggleRow("Сообщать, кто от чего погиб (всплывашка на острове)", CheatState.DeathRecap);
+            AddToggleRow("Сообщать «-$X», когда предмет в руках бьётся и дешевеет", CheatState.DamageAlert);
+            AddLiveInfoRow(RunJournal.Info);
+            AddButtonRow("Открыть всю историю (run_history.txt)", "Открыть", RunJournal.OpenHistory);
+            }),
+            ("Фразы", () =>
+            {
+            AddSectionHeader("Чат: в игре сообщения только озвучиваются, здесь их видно");
+            AddToggleRow("Показывать чужие сообщения на острове", CheatState.ChatToIsland);
+            AddToggleRow("Не озвучивать чужие сообщения (только у вас; против TTS-спама)", CheatState.MuteOthersTts);
+            AddLiveInfoRow(ChatLogHack.Info);
+            AddSectionHeader("Пинги: метка там, куда смотрите (видят только игроки с этим модом)");
+            AddToggleRow("Пинги включены (показывать свои и чужие метки)", CheatState.Pings);
+            AddButtonRow("Пинг туда, куда смотрите (повесьте на клавишу средним кликом)", "Пинг", PingSystem.PingHere);
+            AddFloatStepperRow("  -> Сколько держится, сек", CheatState.PingSeconds, 2f, 30f, 1f);
+            AddButtonRow("Убрать все метки", "Убрать", PingSystem.ClearAll);
+            AddSectionHeader("Быстрые фразы в обычный чат (клавиша - средний клик по кнопке)");
+            AddTextFieldRow("Фраза 1", CheatState.QuickPhrase1);
+            AddButtonRow("  -> Отправить фразу 1", "Отправить", QuickChatHack.Send1);
+            AddTextFieldRow("Фраза 2", CheatState.QuickPhrase2);
+            AddButtonRow("  -> Отправить фразу 2", "Отправить", QuickChatHack.Send2);
+            AddTextFieldRow("Фраза 3", CheatState.QuickPhrase3);
+            AddButtonRow("  -> Отправить фразу 3", "Отправить", QuickChatHack.Send3);
+            AddTextFieldRow("Фраза 4", CheatState.QuickPhrase4);
+            AddButtonRow("  -> Отправить фразу 4", "Отправить", QuickChatHack.Send4);
+            AddLiveInfoRow(() => QuickChatHack.PlaceholderHelp + "\nИгра сама глотает сообщение, отправленное меньше чем через 1 с после прошлого.");
+            }),
+            ("Анти-краш", () =>
+            {
             AddSectionHeader("Защита от краша");
             AddToggleRow("Анти-краш (гасит краш-пакеты; клиент может лагать, но не падает)", CheatState.AntiCrash);
             AddToggleRow("Карантин нарушителей (флудера временно игнорировать целиком; редкий риск рассинхрона)", CheatState.AntiCrashQuarantine);
@@ -755,16 +1023,52 @@ internal static class OverlayUI
                 $"Погашено исключений: {AntiCrashHack.ExceptionsSwallowed}   Отброшено RPC: {AntiCrashHack.RpcsDropped}\n" +
                 $"Отброшено спавнов: {AntiCrashHack.InstantiatesDropped}   В карантине: {AntiCrashHack.QuarantinedCount(System.Environment.TickCount)}");
 
+            AddSectionHeader("Игнор (чужие пакеты на меня не выполняются)");
+            AddToggleRow("Игнорировать убийство от других (хост с модом)", CheatState.IgnoreDeath);
+            AddToggleRow("Игнорировать урон от других", CheatState.IgnoreHurt);
+            AddToggleRow("Игнорировать толчки/импульсы", CheatState.IgnoreImpulse);
+            AddToggleRow("Игнорировать принудительное падение/вращение", CheatState.IgnoreTumble);
+            AddToggleRow("Игнорировать принудительную установку здоровья", CheatState.IgnoreHealthSet);
+            AddLiveInfoRow(() =>
+                $"Отброшено: убийств {IgnoreHack.DeathDropped}, урона {IgnoreHack.HurtDropped}, толчков {IgnoreHack.ImpulseDropped}, падений {IgnoreHack.TumbleDropped}, здоровья {IgnoreHack.HealthDropped}\n" +
+                "Режутся только пакеты от ДРУГИХ игроков на ваш персонаж; своя смерть/урон работают как обычно.");
+
+            }),
+            ("Комнаты", () =>
+            {
             AddSectionHeader("Соседние комнаты");
             AddIntStepperRow("Сколько ещё комнат создавать", CheatState.MultiRoomExtraCount, 1, 10, 1);
             AddIntStepperRow("Лимит игроков в каждой", CheatState.MultiRoomMaxPlayers, 6, 100, 2);
-            AddButtonRow("Создать N независимых комнат с именем вашей текущей (нужно уже быть в комнате; " +
-                "на время создания вас будет перекидывать между комнатами - см. лог)",
+            AddButtonRow("Создать N независимых комнат с именем вашей текущей (нужно быть хостом " +
+                "публичной комнаты и один в ней: иначе игра выкинет остальных в меню; вы остаётесь в " +
+                "последней созданной - см. лог)",
                 "Создать", MultiRoomHack.CreateSiblingRooms);
+
+            }),
+            ("FPS", () =>
+            {
+            AddSectionHeader("Оптимизация (FPS)");
+            AddToggleRow("Оптимизация графики", CheatState.Optimization);
+            AddToggleRow("  -> Выключить тени", CheatState.OptShadows);
+            AddToggleRow("  -> Выключить сглаживание", CheatState.OptAntiAliasing);
+            AddToggleRow("  -> Без попиксельных источников света", CheatState.OptPixelLights);
+            AddToggleRow("  -> Упростить модели вдали (LOD)", CheatState.OptLodBias);
+            AddToggleRow("  -> Без мягких частиц и травы", CheatState.OptSoftParticles);
+            AddToggleRow("  -> Без динамических отражений", CheatState.OptReflectionProbes);
+            AddToggleRow("  -> Выключить постобработку (блум, зерно, размытие)", CheatState.OptPostProcessing);
+            AddToggleRow("  -> Выключить туман", CheatState.OptFog);
+            AddToggleRow("Ограничить FPS, когда игра в фоне (меньше греет видеокарту)", CheatState.BackgroundFpsLimit);
+            AddIntStepperRow("  -> FPS в фоне", CheatState.BackgroundFps, 5, 60, 5);
+            AddToggleRow("Выключать звук, когда игра в фоне (микрофон работает)", CheatState.MuteInBackground);
+            }),
+            }, () => _miscSubTab, v => _miscSubTab = v);
         });
 
         AddTab("Разработчик", () =>
         {
+            AddSectionHeader("Об авторе");
+            AddLiveInfoRow(() => $"{Plugin.Name} {Plugin.Version} - автор: Kolya. Личный мод, распространение под чужим именем не разрешено.");
+
             AddToggleRow("Тестовый пакет (для отладки сети)", CheatState.SendTestPacket, PacketTestHack.OnToggled);
             AddIntStepperRow("  -> Интервал отправки, мс", CheatState.PacketTestIntervalMs, 50, 5000, 50);
 
@@ -787,6 +1091,10 @@ internal static class OverlayUI
 
         AddTab("Тролль", () =>
         {
+            AddSubTabs(new (string, Action)[]
+            {
+            ("Поза", () =>
+            {
             AddSectionHeader("Внешний вид у других");
             AddToggleRow("Анти-аим (у других крутится ваша голова)", CheatState.AntiAimSpin);
             AddToggleRow("Dinner Bone (у других вы перевёрнуты)", CheatState.DinnerBone);
@@ -800,24 +1108,98 @@ internal static class OverlayUI
             AddToggleRow("  -> Показать себе (нужен Third Person)", CheatState.FlipShowSelf);
             AddToggleRow("T-поза (другие видят вас скользящим неподвижно)", CheatState.TPose);
             AddToggleRow("Вечный краул (другие видят вас постоянно ползущим, не совмещать с T-позой)", CheatState.GhostCrawl);
+            AddToggleRow("Фантомный спринт (другие видят, что вы бежите изо всех сил, стоя на месте)", CheatState.PhantomSprint);
+            }),
+            ("Видимость", () =>
+            {
+            AddToggleRow("Все смотрят на меня (аватары в радиусе 6 м провожают вас глазами, звука нет)", CheatState.AllEyesOnMe);
+            AddToggleRow("Фантомные прыжки (другие видят и слышат ваши прыжки с искрами, пока вы стоите)", CheatState.PhantomJump);
+            AddToggleRow("Фейк-урон (у других вы краснеете и стонете, потом зеленеете; настоящее HP не меняется)", CheatState.FakeHurt);
+            AddFloatStepperRow("  -> Интервал фантомных действий, сек", CheatState.FakeMotionInterval, 0.3f, 10f, 0.1f);
+            AddToggleRow("Скорость анимации у других (ваше реальное движение не меняется)", CheatState.AnimSpeedSpoof);
+            AddFloatStepperRow("  -> Множитель (0.2 = слоу-мо как песочные часы, 3+ = дёрганый)", CheatState.AnimSpeedValue, 0.1f, 5f, 0.1f);
             AddToggleRow("Невидимка (у других модель улетает высоко в небо)", CheatState.Invisible);
             AddFloatStepperRow("  -> Высота", CheatState.InvisibleHeight, 500f, 20000f, 500f);
+            AddToggleRow("  -> Блокировать хват (чтобы луч и улетающие ценности не выдали позицию)", CheatState.InvisibleBlockGrab);
+            AddToggleRow("  -> Телекинез (общий с «Призраком», бинд «Схватить/отпустить»)", CheatState.GhostTelekinesis);
+            AddFloatStepperRow("  -> Дистанция удержания, м", CheatState.GhostTelekinesisDistance, 1f, 15f, 0.5f);
+            AddLiveInfoRow(GhostTelekinesisHack.Status);
+            AddLiveInfoRow(GhostTelekinesisHack.KeyHint);
+            AddLiveInfoRow(InvisibleStatus.Line);
+            AddToggleRow("  -> Говорить анонимно, не показываясь (голос без 3D-позиции, слышно всем)", CheatState.InvisibleSpeak);
             AddToggleRow("  -> Звучать нормально во время разговора (тогда видно, пока говорите)", CheatState.InvisibleRevealWhileTalking);
+            AddToggleRow("  -> Над потолком вместо неба (эксперимент: голос слышен приглушённо)", CheatState.InvisibleOverCeiling);
+            AddFloatStepperRow("  -> Высота над потолком, м", CheatState.InvisibleOverCeilingHeight, 4f, 25f, 1f);
             AddToggleRow("Дёрганый фонарик (у других луч мечется в стороны, у вас всё нормально)", CheatState.GlitchyFlashlight);
             AddFloatStepperRow("  -> Радиус болтания, м", CheatState.GlitchyFlashlightRadius, 1f, 10f, 0.5f);
+            }),
+            ("Фейки", () =>
+            {
+            AddToggleRow("Фейковый пинг в лобби (другие видят выдуманное число вместо реального)", CheatState.FakePing);
+            AddIntStepperRow("  -> Значение, мс (шаг 500)", CheatState.FakePingValue, 0, 1000000, 500);
+            AddTextFieldRow("  -> Своё число, мс (до 2147483647)", CheatState.FakePingText);
+            AddToggleRow("Фальшивый перегрев луча (у других светится/искрит/гудит рука, реального перегрева нет)", CheatState.FakeOvercharge);
+            AddIntStepperRow("  -> Интенсивность", CheatState.FakeOverchargeValue, 0, 200, 20);
+            AddToggleRow("Диско-луч (у других луч захвата и рука меняют цвет, у вас оранжевый)", CheatState.DiscoBeam);
+            AddIntStepperRow("  -> Режим (0 цикл, 1 зелёный, 2 фиолетовый, 3 синий)", CheatState.DiscoBeamMode, 0, 3, 1);
+            AddFloatStepperRow("  -> Смен цвета в секунду (цикл)", CheatState.DiscoBeamSpeed, 0.5f, 12f, 0.5f);
+            AddToggleRow("Игроки на карте (Tab): где сейчас каждый, своим цветом", CheatState.TeammatesOnMap);
+            AddToggleRow("Предупреждать о невидимых игроках (в комнате, но без персонажа)", CheatState.HiddenPlayerAlert);
+            AddLiveInfoRow(HiddenPlayersHack.Status);
             AddToggleRow("Призрачный наездник (у других вы едете верхом на ближайшем предмете)", CheatState.GhostRider);
             AddLiveInfoRow(() => !CheatState.GhostRider.Value ? "  -> Выключено"
                 : GhostRiderHack.HasTarget ? "  -> Цель (видно только другим): " + GhostRiderHack.TargetName
                 : "  -> Ищу цель рядом...");
 
+            }),
+            ("Призрак", () =>
+            {
+            AddSectionHeader("Призрак-наблюдатель (только гость, включать ДО захода в комнату)");
+            AddToggleRow("Призрак-наблюдатель (вас нет в списках игроков; все их RPC обрезаются)", CheatState.GhostObserver);
+            AddLiveInfoRow(GhostObserverHack.Status);
+            AddSectionHeader("Голос");
+            AddToggleRow("Слышать других (приём включён; свой микрофон блокируем, если нижняя строка выключена)", CheatState.GhostObserverHear);
+            AddToggleRow("Говорить голосом (анонимно, звук без 3D-позиции; кто вас слышит - в статусе призрака)", CheatState.GhostSpeak);
+            AddToggleRow("Слышать всех без затухания по расстоянию (spatialBlend=0)", CheatState.GhostHearAll);
+            AddSectionHeader("Движение");
+            AddToggleRow("Полёт сквозь стены (noclip; у призрака никто не видит)", CheatState.Noclip);
+            AddToggleRow("Следовать за выбранным игроком (вкладка «Игроки»)", CheatState.GhostFollow);
+            AddFloatStepperRow("  -> Дистанция следования, м", CheatState.GhostFollowDistance, 1f, 10f, 0.5f);
+            AddToggleRow("  -> Смотреть его глазами (камера туда, куда смотрит он)", CheatState.GhostFollowEyes);
+            AddButtonRow("Переключить на следующего игрока", "Следующий", GhostFollowHack.NextTarget);
+            AddButtonRow("Выбрать игрока в прицеле (бинд: наведи+нажми)", "В прицеле", GhostFollowHack.PickHoveredPlayer);
+            AddButtonRow("Прыгнуть к выбранному игроку (мгновенно, без слежки)", "Прыгнуть", GhostFollowHack.JumpToPicked);
+            AddButtonRow("Прыгнуть к ближайшей/самой дорогой ценности", "К ценности", GhostFollowHack.JumpToTopValuable);
+            AddButtonRow("Прыгнуть к грузовику (безопасный поинт)", "К грузовику", GhostFollowHack.JumpToTruck);
+            AddButtonRow("Прыгнуть к точке выхода (ближайшая неактивная)", "К выходу", GhostFollowHack.JumpToExtraction);
+            AddLiveInfoRow(GhostFollowHack.Status);
+            AddLiveInfoRow(GhostFollowHack.KeysHint);
+            AddLiveInfoRow(GhostFollowHack.PlayersPanel);
+            AddSectionHeader("Телекинез (двигать предметы)");
+            AddToggleRow("Телекинез: поднимать предмет перед камерой (бинд: Схватить/отпустить)", CheatState.GhostTelekinesis);
+            AddFloatStepperRow("  -> Дистанция удержания, м (колесо меняет на лету)", CheatState.GhostTelekinesisDistance, 1f, 15f, 0.5f);
+            AddLiveInfoRow(GhostTelekinesisHack.Status);
+            AddLiveInfoRow(GhostTelekinesisHack.KeyHint);
+
+            }),
+            ("Чат", () =>
+            {
             AddSectionHeader("Спам в чат");
             AddToggleRow("Спам фразами в чат (шлёт по кругу список ниже, реальные сообщения в игровой чат)", CheatState.ChatSpam);
             AddChatSpamTextRow();
             AddFloatStepperRow("Интервал между сообщениями, сек (игра сама не шлёт чаще 1/сек)", CheatState.ChatSpamInterval, 1f, 30f, 0.5f);
+            AddToggleRow("  -> Раскрашивать (rich text)", CheatState.ChatSpamRichText);
+            AddColorCycleRow("  -> Цвет", CheatState.ChatSpamColor);
+            AddIntStepperRow("  -> Размер шрифта", CheatState.ChatSpamFontSize, 10, 100, 5);
 
+            }),
+            ("Ловушки", () =>
+            {
             AddSectionHeader("Ловушки (удалённый запуск, реально для всех)");
             AddButtonRow("Ближайшая ловушка к вам", "Запустить", TrapTriggerHack.TriggerNearest);
             AddButtonRow("Все ловушки на уровне сразу", "Запустить все", TrapTriggerHack.TriggerAllInLevel);
+            }),
+            }, () => _trollSubTab, v => _trollSubTab = v);
         });
 
         // Was CustomOverlayUI-only until now (2026-09-11) - PlayerHud.cs's always-on gameplay
@@ -826,12 +1208,21 @@ internal static class OverlayUI
         // cosmetic one.
         AddTab("HUD", () =>
         {
+            AddSubTabs(new (string, Action)[]
+            {
+            ("Общее", () =>
+            {
+            AddCycleRow("Режим меню RightShift: старый, новый (Rockstar) или выпадающий", CheatState.MenuStyle, MenuRouter.Modes);
             AddToggleRow("HUD включён (виджеты поверх игры, отдельно от меню)", CheatState.HudEnabled);
             AddToggleRow("Режим редактирования (перетаскивание/цвет/вкл-выкл)", CheatState.HudEditMode);
             AddToggleRow("Авто-колонка (виджеты стакаются вплотную)", CheatState.HudAutoStack);
-            AddLiveInfoRow(() => "В режиме редактирования: тащите виджет за шапку, \"x\" убирает его, " +
-                "цветной квадрат меняет акцентный цвет. Убранные виджеты возвращаются кнопками сверху экрана.");
+            AddFloatStepperRow("Размер карточек (px на единицу Rockstar)", CheatState.HudScale, 1f, 4f, 0.25f);
+            AddLiveInfoRow(() => "В режиме редактирования: тащите виджет мышью, правый клик убирает его, " +
+                "средний клик меняет акцентный цвет. Убранные виджеты возвращаются кнопками сверху экрана.");
 
+            }),
+            ("Карточки", () =>
+            {
             AddSectionHeader("Виджет «Игрок» (ник, fps, пинг, координаты)");
             AddToggleRow("Показывать", CheatState.HudPlayerStats.Enabled);
             AddColorCycleRow("  -> Цвет", CheatState.HudPlayerStats.Color);
@@ -841,16 +1232,61 @@ internal static class OverlayUI
             AddColorCycleRow("  -> Цвет", CheatState.HudTargetInfo.Color);
             AddLiveInfoRow(() => "Цель берётся из общего поля имени на вкладке «Игроки».");
 
+            AddSectionHeader("Виджет «Бинды» (реальные привязанные клавиши)");
+            AddToggleRow("Показывать", CheatState.HudKeybinds.Enabled);
+            AddColorCycleRow("  -> Цвет", CheatState.HudKeybinds.Color);
+            AddLiveInfoRow(() => "Выключен по умолчанию - список тех же биндов, что заданы средним кликом по строкам меню.");
+
+            AddSectionHeader("Виджет «Команда» (ник, HP и дистанция каждого тиммейта)");
+            AddToggleRow("Показывать", CheatState.HudTeam.Enabled);
+            AddColorCycleRow("  -> Цвет", CheatState.HudTeam.Color);
+
+            AddSectionHeader("Виджет «Враги» (6 ближайших монстров и расстояние до них)");
+            AddToggleRow("Показывать", CheatState.HudEnemies.Enabled);
+            AddColorCycleRow("  -> Цвет", CheatState.HudEnemies.Color);
+
+            AddSectionHeader("Виджет «Лут» (сколько ценностей осталось на карте и 5 самых дорогих)");
+            AddToggleRow("Показывать", CheatState.HudLoot.Enabled);
+            AddColorCycleRow("  -> Цвет", CheatState.HudLoot.Color);
+
+            AddSectionHeader("Виджет «Забег» (уровень, добыча, точки эвакуации, время, кто жив)");
+            AddToggleRow("Показывать", CheatState.HudRun.Enabled);
+            AddColorCycleRow("  -> Цвет", CheatState.HudRun.Color);
+
+            }),
+            ("Плеер", () =>
+            {
             AddSectionHeader("Виджет «Плеер»");
             AddToggleRow("Показывать", CheatState.HudMediaPlayer.Enabled);
             AddColorCycleRow("  -> Цвет", CheatState.HudMediaPlayer.Color);
             AddToggleRow("  -> Реальный трек из Spotify (по заголовку окна)", CheatState.HudMediaPlayerUseSpotify);
             AddTextFieldRow("  -> Название трека (если Spotify выключен)", CheatState.HudMediaPlayerTitle);
-
-            AddSectionHeader("Виджет «Бинды» (реальные привязанные клавиши)");
-            AddToggleRow("Показывать", CheatState.HudKeybinds.Enabled);
-            AddColorCycleRow("  -> Цвет", CheatState.HudKeybinds.Color);
-            AddLiveInfoRow(() => "Выключен по умолчанию - список тех же биндов, что заданы средним кликом по строкам меню.");
+            }),
+            ("Остров", () =>
+            {
+            AddToggleRow("Главный экран Rockstar (часы и круглые кнопки поверх меню игры)", CheatState.MainScreen);
+            AddToggleRow("  -> Сразу показывать кнопки (без часов)", CheatState.MainScreenStartOpen);
+            AddToggleRow("Dynamic Island (остров сверху)", CheatState.HudIsland);
+            AddToggleRow("  -> Уведомления о включении функций", CheatState.HudIslandNotifications);
+            AddToggleRow("  -> GPS: расстояние и стрелка", CheatState.HudIslandExtraction);
+            AddToggleRow("  -> Музыка в острове", CheatState.HudIslandMusic);
+            AddToggleRow("  -> Текст песни в острове", CheatState.HudIslandLyrics);
+            AddToggleRow("  -> Карточка выбранного игрока", CheatState.HudIslandTarget);
+            AddTextFieldRow("  -> Свой текст в острове (фразы через |)", CheatState.HudIslandText);
+            AddToggleRow("  -> Часы и пинг по бокам", CheatState.HudIslandSides);
+            AddToggleRow("  -> Размытие фона под островом", CheatState.HudIslandBlur);
+            AddFloatStepperRow("  -> Размер острова", CheatState.HudIslandScale, 1f, 4f, 0.25f);
+            AddButtonRow("GPS: следующая цель (эвакуация / грузовик / метка / выкл)", "Дальше", Gps.NextMode);
+            AddButtonRow("GPS: поставить метку здесь", "Метка", Gps.SetMarkHere);
+            }),
+            ("Текст песни", () =>
+            {
+            AddToggleRow("Текст песни в главном меню", CheatState.HudLyrics);
+            AddToggleRow("  -> Показывать и в игре", CheatState.HudLyricsInGame);
+            AddToggleRow("  -> Искать текст в интернете (lrclib.net)", CheatState.HudLyricsOnline);
+            AddFloatStepperRow("  -> Сдвиг текста, сек", CheatState.HudLyricsOffset, -30f, 30f, 0.5f);
+            }),
+            }, () => _hudSubTab, v => _hudSubTab = v);
         });
     }
 
@@ -895,6 +1331,45 @@ internal static class OverlayUI
         var le = sep.AddComponent<LayoutElement>();
         le.preferredHeight = 1f;
         le.minHeight = 1f;
+    }
+
+    // A second navigation level inside a single top-level tab's content - a row of pill buttons
+    // ("Движение" > "Bhop", "Визуал" > "ESP") so a long tab splits into focused groups instead of
+    // one long scrolling list, the same category/sub-category chain VSCode's own Settings editor
+    // uses. Reuses the exact mechanic the top tab bar already relies on: clicking a sub-tab just
+    // calls SelectTab(_activeTab) again, which destroys every row and reruns the tab's whole
+    // builder lambda - the only new state is which sub-tab index that rerun should land on, kept
+    // in a field the caller owns (getActive/setActive) so each top tab remembers its own last
+    // sub-tab independently (see _movementSubTab/_visualSubTab).
+    private static void AddSubTabs((string Name, Action Build)[] subTabs, Func<int> getActive, Action<int> setActive)
+    {
+        int active = Mathf.Clamp(getActive(), 0, subTabs.Length - 1);
+
+        var bar = new GameObject("SubTabs", typeof(RectTransform));
+        bar.transform.SetParent(_content.transform, false);
+        _contentRows.Add(bar);
+        var layout = bar.AddComponent<HorizontalLayoutGroup>();
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.spacing = 6;
+        var barLe = bar.AddComponent<LayoutElement>();
+        barLe.preferredHeight = 30;
+
+        for (int i = 0; i < subTabs.Length; i++)
+        {
+            int idx = i;
+            Button btn = CreateButton(bar.transform, subTabs[i].Name, () => { setActive(idx); SelectTab(_activeTab); });
+            var btnLe = btn.gameObject.AddComponent<LayoutElement>();
+            btnLe.preferredHeight = 26;
+            btnLe.preferredWidth = Mathf.Max(64, subTabs[i].Name.Length * 8 + 24);
+            SetPanelColor(btn, idx == active ? TabActiveColor : TabIdleColor);
+        }
+
+        _currentCard = null; // the sub-tab's own content starts a fresh card, not appended to the bar
+        subTabs[active].Build();
     }
 
     // name -> the thin left-edge accent bar shown only while that tab is active, alongside
@@ -945,10 +1420,15 @@ internal static class OverlayUI
     private static void AddLiveInfoRow(Func<string> source)
     {
         if (_currentCard == null) BeginCard();
-        var text = CreateText(_currentCard, source(), 13, TextAnchor.MiddleLeft, SectionHeaderColor, wrap: true);
+        string initial = source();
+        var text = CreateText(_currentCard, initial, 13, TextAnchor.MiddleLeft, SectionHeaderColor, wrap: true);
         _contentRows.Add(text.gameObject);
         var le = text.gameObject.AddComponent<LayoutElement>();
-        le.preferredHeight = 42;
+        // Fixed 42 px fits two lines; multi-line texts (preset slots, key list) used to spill over the
+        // rows below. Height follows the line count the text has when the tab is built.
+        int lines = 1;
+        foreach (char ch in initial ?? "") if (ch == '\n') lines++;
+        le.preferredHeight = Mathf.Max(42, lines * 17 + 8);
         _liveTexts.Add((text, source));
     }
 

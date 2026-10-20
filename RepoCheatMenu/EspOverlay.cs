@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -209,14 +217,17 @@ internal static class EspOverlay
             // PlayerController.instance.transform") - for every other player it's always null,
             // which is why this never drew anything before. avatar.transform (the component's
             // own transform, synced over the network regardless of ownership) is what we want.
-            float dist = Vector3.Distance(cam.transform.position, avatar.transform.position);
+            // Dead: the label follows the death head, not the death spot the avatar stays at.
+            bool deadNow = GameReflect.Get<bool>(avatar, "deadSet");
+            Vector3 at = PlayerTargets.WorldPosition(avatar);
+            float dist = Vector3.Distance(cam.transform.position, at);
             if (dist > CheatState.EspMaxDistance.Value) continue;
 
-            Vector3? screen = WorldToScreen(cam, avatar.transform.position + Vector3.up * 2.2f);
+            Vector3? screen = WorldToScreen(cam, at + Vector3.up * (deadNow ? 0.6f : 2.2f));
             if (screen == null) continue;
 
             bool dead = GameReflect.Get<bool>(avatar, "deadSet");
-            string name = GameReflect.Get<string>(avatar, "playerName");
+            string name = CheatState.StreamerMode.Value ? PlayerTargets.DisplayName(avatar) : GameReflect.Get<string>(avatar, "playerName");
 
             var sb = new StringBuilder();
             sb.Append(string.IsNullOrEmpty(name) ? "Player" : name);
@@ -256,6 +267,13 @@ internal static class EspOverlay
 
             DrawBox(screen.Value, sb.ToString(), color);
             rootsOut?.Add(avatar.transform);
+            // The death head is a sibling of the avatar (PlayerDeathHead.SetupDone reparents it), not a child,
+            // so it has to be listed on its own for the chams to show a dead player.
+            if (deadNow)
+            {
+                PlayerDeathHead head = GameReflect.Get<PlayerDeathHead>(avatar, "playerDeathHead");
+                if (head != null) rootsOut?.Add(head.transform);
+            }
         }
     }
 
@@ -269,7 +287,7 @@ internal static class EspOverlay
 
         foreach (EnemyParent parent in enemies)
         {
-            if (parent == null) continue;
+            if (parent == null || !GameReflect.Get<bool>(parent, "Spawned")) continue; // despawned: not on the map
 
             // Field is "Enemy" (capital E) in the currently installed game build - confirmed live
             // via the debug bridge (2026-09-08): GameReflect.Get<Enemy>(parent, "enemy") (lowercase)
@@ -374,6 +392,7 @@ internal static class EspOverlay
 
     private static void Draw(Camera cam, Vector3 worldPos, string label, Color color)
     {
+        if (RockEsp.Active) return; // the Rockstar-style tags (RockEsp) draw the labels instead
         Vector3? screen = WorldToScreen(cam, worldPos);
         if (screen == null) return;
 
@@ -386,6 +405,7 @@ internal static class EspOverlay
 
     private static void DrawBox(Vector3 screen, string text, Color color)
     {
+        if (RockEsp.Active) return;
         BoxMarker marker = GetBoxMarker();
         marker.Root.SetActive(true);
         marker.Rect.position = screen;

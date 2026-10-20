@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
@@ -155,7 +163,7 @@ internal static class MassRaidHack
 
             Vector2 dir2 = Random.insideUnitCircle.normalized;
             Vector3 pos = physObject.transform.position + new Vector3(dir2.x, 0f, dir2.y) * 10f + Vector3.down * 30f;
-            physObject.Teleport(pos, physObject.transform.rotation);
+            GameReflect.TeleportSafe(physObject, pos, physObject.transform.rotation, "MassRaidHack");
             count++;
         }
         Plugin.Log.LogInfo($"Item Purge: scattered {count} item(s).");
@@ -187,7 +195,7 @@ internal static class MassRaidHack
 
             Vector2 dir2 = Random.insideUnitCircle.normalized;
             Vector3 pos = p.transform.position + new Vector3(dir2.x, 0f, dir2.y) * 5f;
-            held.Teleport(pos, held.transform.rotation);
+            GameReflect.TeleportSafe(held, pos, held.transform.rotation, "MassRaidHack");
         }
     }
 
@@ -233,7 +241,7 @@ internal static class MassRaidHack
         {
             Vector2 dir2 = Random.insideUnitCircle.normalized;
             Vector3 pos = _yeetStormPending.transform.position + new Vector3(dir2.x, 0f, dir2.y) * 80f + Vector3.up * 40f;
-            body.Teleport(pos, _yeetStormPending.transform.rotation);
+            GameReflect.TeleportSafe(body, pos, _yeetStormPending.transform.rotation, "MassRaidHack");
         }
         _yeetStormPending = null;
     }
@@ -251,7 +259,7 @@ internal static class MassRaidHack
 
             Vector2 dir2 = Random.insideUnitCircle.normalized;
             Vector3 pos = physObject.transform.position + new Vector3(dir2.x, 0f, dir2.y) * 15f + Vector3.down * 40f;
-            physObject.Teleport(pos, physObject.transform.rotation);
+            GameReflect.TeleportSafe(physObject, pos, physObject.transform.rotation, "MassRaidHack");
             count++;
         }
         Plugin.Log.LogInfo($"Cart Yeet: scattered {count} cart(s).");
@@ -280,7 +288,7 @@ internal static class MassRaidHack
             if (physObject == null) continue;
 
             Vector2 dir2 = Random.insideUnitCircle.normalized;
-            physObject.Teleport(hidePoint + new Vector3(dir2.x, 0f, dir2.y) * 3f, physObject.transform.rotation);
+            GameReflect.TeleportSafe(physObject, hidePoint + new Vector3(dir2.x, 0f, dir2.y) * 3f, physObject.transform.rotation, "MassRaidHack");
             count++;
         }
         Plugin.Log.LogInfo($"Valuable Blackhole: hid {count} valuable(s).");
@@ -336,7 +344,7 @@ internal static class MassRaidHack
 
             PhysGrabObject body = GetBody(target);
             if (body != null && (body.transform.position - point).sqrMagnitude > 0.25f)
-                body.Teleport(point, target.transform.rotation);
+                GameReflect.TeleportSafe(body, point, target.transform.rotation, "MassRaidHack");
         }
 
         if (_camperPoints.Count > 0)
@@ -473,7 +481,7 @@ internal static class MassRaidHack
             }
 
             PhysGrabObject body = GetBody(target);
-            body?.Teleport(target.transform.position + Vector3.down * ArenaWeaponsDropDepth, target.transform.rotation);
+            if (body != null) GameReflect.TeleportSafe(body, target.transform.position + Vector3.down * ArenaWeaponsDropDepth, target.transform.rotation, "MassRaidHack");
         }
     }
 
@@ -531,7 +539,7 @@ internal static class MassRaidHack
 
             Vector3 aheadPoint = vehicle.transform.position + vehicle.transform.forward * ArenaLegitAheadDistance;
             Quaternion blockFacing = Quaternion.LookRotation(vehicle.transform.right, Vector3.up);
-            obstacle.Teleport(aheadPoint, blockFacing);
+            GameReflect.TeleportSafe(obstacle, aheadPoint, blockFacing, "MassRaidHack");
         }
     }
 
@@ -567,7 +575,7 @@ internal static class MassRaidHack
             if (physObject == null) continue;
 
             Vector3 pos = vehicle.transform.position + Vector3.down * 30f;
-            physObject.Teleport(pos, vehicle.transform.rotation);
+            GameReflect.TeleportSafe(physObject, pos, vehicle.transform.rotation, "MassRaidHack");
         }
     }
 

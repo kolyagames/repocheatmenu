@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
@@ -65,7 +73,7 @@ internal static class ShopDestroyerHack
             _guestNextSlamTime[id] = Time.unscaledTime + GuestSlamCooldown;
 
             Vector3 slamTo = physObject.transform.position + Random.insideUnitSphere * 6f;
-            physObject.Teleport(slamTo, physObject.transform.rotation);
+            GameReflect.TeleportSafe(physObject, slamTo, physObject.transform.rotation, "ShopDestroyer");
         }
     }
 }

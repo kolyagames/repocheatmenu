@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -50,7 +58,7 @@ internal static class CartHack
         if (physObject == null) return;
 
         Vector3 pos = local.transform.position + local.transform.forward * 2.5f;
-        physObject.Teleport(pos, local.transform.rotation);
+        GameReflect.TeleportSafe(physObject, pos, local.transform.rotation, "CartHack");
     }
 
     private const float RamTickInterval = 0.05f; // ~20/sec, same rate PowerGrabHack uses
@@ -71,7 +79,10 @@ internal static class CartHack
     public static void ApplyRam()
     {
         PlayerAvatar local = PlayerAvatar.instance;
-        if (!CheatState.CartRam.Value || local == null)
+        // Ghost: needs OverrideGrab on our PhysGrabber (vetoed by GhostObserverHack.Tick) and a
+        // GrabStartedRPC the ghost filter would drop anyway. The cart stays wherever it was.
+        bool killed = GhostObserverHack.LocalRpcIsMuted;
+        if (!CheatState.CartRam.Value || local == null || killed)
         {
             if (_ramGrabbing)
             {
@@ -116,7 +127,7 @@ internal static class CartHack
         _lastRamTick = Time.unscaledTime;
 
         Vector3 ramPoint = target.transform.position + (local.transform.position - target.transform.position).normalized * 0.5f;
-        held.Teleport(ramPoint, held.transform.rotation);
+        GameReflect.TeleportSafe(held, ramPoint, held.transform.rotation, "CartHack");
     }
 
     private const float PullTickInterval = 0.1f;
@@ -159,7 +170,7 @@ internal static class CartHack
                 HorizontalArriveDistance, OverlapCheckRadius, solidMask, out Vector3 next);
             if (!safe) continue;
 
-            physObject.Teleport(next, physObject.transform.rotation);
+            GameReflect.TeleportSafe(physObject, next, physObject.transform.rotation, "CartHack");
         }
     }
 }

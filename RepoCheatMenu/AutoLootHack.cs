@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -21,6 +29,10 @@ internal static class AutoLootHack
     public static void Apply()
     {
         if (!CheatState.AutoLoot.Value) return;
+        // Ghost cannot actually grab anything: our OverrideGrab is vetoed every frame by
+        // GhostObserverHack.Tick's OverrideGrabDisable, and the GrabStartedRPC would be
+        // filtered anyway. Skip quietly instead of running a wasted scan every tick.
+        if (GhostObserverHack.LocalRpcIsMuted) return;
         if (Time.unscaledTime - _lastScan < TickInterval) return;
         _lastScan = Time.unscaledTime;
 
@@ -50,7 +62,11 @@ internal static class AutoLootHack
 
         if (nearest == null) return;
 
+        // Re-fetch the PhysGrabObject right before the call: during the long scan above the target
+        // can be destroyed (another player grabbed it, host de-spawned it on scene swap). Without
+        // this guard OverrideGrab would NRE on the dead component.
         PhysGrabObject held = nearest.GetComponent<PhysGrabObject>();
+        if (held == null || held.transform == null) return;
         grabber.OverrideGrab(held);
     }
 }

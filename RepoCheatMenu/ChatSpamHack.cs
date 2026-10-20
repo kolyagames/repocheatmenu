@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using UnityEngine;
 
 namespace RepoCheatMenu;
@@ -17,6 +25,10 @@ internal static class ChatSpamHack
     public static void Apply()
     {
         if (!CheatState.ChatSpam.Value) return;
+        // Chat is PlayerAvatar.ChatMessageSend -> photonView.RPC on our avatar's view. Under
+        // Ghost Observer our outgoing RPCs for that view are filtered, so a spam attempt would
+        // only echo in our own chat and nobody else would see it. Skip silently.
+        if (GhostObserverHack.SessionGhost) return;
         if (ChatManager.instance == null) return;
         if (Time.unscaledTime < _nextSend) return;
 

@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using UnityEngine;
 
 namespace RepoCheatMenu;
@@ -16,16 +24,28 @@ namespace RepoCheatMenu;
 internal static class UpgradeStandHack
 {
     private const int UnlockedMaxReroll = 999;
+    // UpgradeStand only exists in the shop level and never changes mid-level - no reason to run
+    // a full scene-wide FindObjectsByType every ~0.15s hack tick. Scanning once a second is
+    // plenty; the stand's maxRerollCount is written once per press, not per frame, so even that
+    // cadence catches every real change.
+    private const float ScanInterval = 1f;
+    private static UpgradeStand[] _stands;
+    private static float _nextScan;
 
     public static void Apply()
     {
-        if (!CheatState.UnlimitedRerolls.Value) return;
+        if (!CheatState.UnlimitedRerolls.Value) { _stands = null; return; }
         if (!SemiFunc.IsMasterClientOrSingleplayer()) return;
 
-        foreach (UpgradeStand stand in Object.FindObjectsByType<UpgradeStand>(FindObjectsSortMode.None))
+        float t = Time.unscaledTime;
+        if (_stands == null || t >= _nextScan)
+        {
+            _stands = Object.FindObjectsByType<UpgradeStand>(FindObjectsSortMode.None);
+            _nextScan = t + ScanInterval;
+        }
+        foreach (UpgradeStand stand in _stands)
         {
             if (stand == null) continue;
-
             int maxReroll = GameReflect.Get<int>(stand, "maxRerollCount");
             if (maxReroll >= 0 && maxReroll < UnlockedMaxReroll)
                 GameReflect.Set(stand, "maxRerollCount", UnlockedMaxReroll);

@@ -1,0 +1,157 @@
+# ============================================================================
+# RepoCheatMenu - инструменты сборки
+# Copyright (c) 2026 Kolya. Все права защищены.
+# Исходный код закрыт: без разрешения автора не копировать, не публиковать
+# и не выдавать за свою работу. Подробности - LICENSE.txt.
+# Часть дизайна, чисел и ресурсов здесь перенесена из клиента Rockstar;
+# эти части принадлежат их авторам.
+# ============================================================================
+
+"""Rasterises Rockstar's menu SVG icons (only absolute M/L/H/V/C/Z paths are used by them) into 64x64
+Alpha8 bitmaps and writes RepoCheatMenu/RockIconData.cs. Fill is non-zero winding, like SVG's default.
+
+    python tools/make-icons.py [path-to-rockstar-icons-font-dir]
+"""
+import base64
+import os
+import re
+import sys
+
+import numpy as np
+from PIL import Image, ImageDraw
+
+SRC = sys.argv[1] if len(sys.argv) > 1 else r"C:\Users\Kolya\Desktop\projects\rockstar-client-1.21.11-clean-src\src\main\resources\assets\rockstar\icons\font"
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "RepoCheatMenu", "RockIconData.cs")
+SIZE = 64
+SS = 8  # supersampling
+
+ICONS = {
+    "combat": "category/combat.svg",
+    "movement": "category/movement.svg",
+    "visuals": "category/visuals.svg",
+    "player": "category/player.svg",
+    "other": "category/other.svg",
+    "logo": "logo.svg",
+    "search": "search.svg",
+    "xmark": "xmark.svg",
+    "setting": "setting.svg",
+    "check": "check.svg",
+    "back": "back.svg",
+    "error": "error.svg",
+    "info": "info.svg",
+}
+
+
+def tokens(d):
+    for m in re.finditer(r"([MLHVCZ])|(-?\d*\.?\d+(?:e-?\d+)?)", d):
+        yield m.group(1) or float(m.group(2))
+
+
+def flatten(d):
+    """Absolute-command path data -> list of closed polygons (lists of (x, y))."""
+    toks = list(tokens(d))
+    i = 0
+    polys, cur = [], []
+    x = y = 0.0
+    cmd = None
+
+    def num():
+        nonlocal i
+        v = toks[i]
+        i += 1
+        return v
+
+    while i < len(toks):
+        if isinstance(toks[i], str):
+            cmd = toks[i]
+            i += 1
+            if cmd == "Z":
+                if cur:
+                    polys.append(cur)
+                cur = []
+                continue
+        if cmd == "M":
+            if cur:
+                polys.append(cur)
+            x, y = num(), num()
+            cur = [(x, y)]
+            cmd = "L"  # further pairs after M are implicit L
+        elif cmd == "L":
+            x, y = num(), num()
+            cur.append((x, y))
+        elif cmd == "H":
+            x = num()
+            cur.append((x, y))
+        elif cmd == "V":
+            y = num()
+            cur.append((x, y))
+        elif cmd == "C":
+            x1, y1, x2, y2, x3, y3 = (num() for _ in range(6))
+            for k in range(1, 17):
+                t = k / 16
+                u = 1 - t
+                px = u**3 * x + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t**3 * x3
+                py = u**3 * y + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t**3 * y3
+                cur.append((px, py))
+            x, y = x3, y3
+        else:
+            raise ValueError("unsupported command %r" % (cmd,))
+    if cur:
+        polys.append(cur)
+    return polys
+
+
+def area(poly):
+    return 0.5 * sum(poly[k][0] * poly[(k + 1) % len(poly)][1] - poly[(k + 1) % len(poly)][0] * poly[k][1] for k in range(len(poly)))
+
+
+def render(svg):
+    vb = [float(v) for v in re.search(r'viewBox="([^"]+)"', svg).group(1).split()]
+    scale = SIZE * SS / max(vb[2], vb[3])
+    winding = np.zeros((SIZE * SS, SIZE * SS), dtype=np.int32)
+    # Only paths inside <g> are drawn, <clipPath>/<defs> rects are not geometry.
+    body = re.sub(r"<defs>.*?</defs>", "", svg, flags=re.S)
+    for d in re.findall(r'<path[^>]*\sd="([^"]+)"', body):
+        for poly in flatten(d):
+            if len(poly) < 3:
+                continue
+            pts = [((px - vb[0]) * scale, (py - vb[1]) * scale) for px, py in poly]
+            img = Image.new("L", (SIZE * SS, SIZE * SS), 0)
+            ImageDraw.Draw(img).polygon(pts, fill=1)
+            sign = 1 if area(poly) > 0 else -1
+            winding += sign * np.asarray(img, dtype=np.int32)
+    mask = (winding != 0).astype(np.float32)
+    small = mask.reshape(SIZE, SS, SIZE, SS).mean(axis=(1, 3))
+    return (small * 255 + 0.5).astype(np.uint8)
+
+
+lines = [
+    "// " + "=" * 76,
+    "// RepoCheatMenu - вспомогательный мод для R.E.P.O.",
+    "// Copyright (c) 2026 Kolya. Все права защищены.",
+    "// Исходный код закрыт: без разрешения автора не копировать, не публиковать",
+    "// и не выдавать за свою работу. Подробности - LICENSE.txt.",
+    "// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.",
+    "// Часть дизайна, чисел и ресурсов здесь перенесена из клиента Rockstar;",
+    "// эти части принадлежат их авторам.",
+    "// " + "=" * 76,
+    "",
+    "// <auto-generated> by tools/make-icons.py from Rockstar's menu SVG icons - do not edit by hand.",
+    "namespace RepoCheatMenu;",
+    "",
+    "internal static class RockIconData",
+    "{",
+    "    public const int Size = %d;" % SIZE,
+    "    // Alpha8 bitmaps, Size x Size, rows bottom-to-top (Unity's texture order), base64.",
+    "    public static readonly System.Collections.Generic.Dictionary<string, string> Alpha = new()",
+    "    {",
+]
+for name, rel in ICONS.items():
+    svg = open(os.path.join(SRC, rel), encoding="utf-8").read()
+    alpha = render(svg)
+    flipped = np.ascontiguousarray(alpha[::-1])
+    lines.append('        ["%s"] = "%s",' % (name, base64.b64encode(flipped.tobytes()).decode()))
+    print(name, "ok", int(alpha.sum() / 255), "px covered")
+lines += ["    };", "}", ""]
+open(OUT, "w", encoding="utf-8", newline="\n").write("\n".join(lines))
+print("wrote", os.path.normpath(OUT))

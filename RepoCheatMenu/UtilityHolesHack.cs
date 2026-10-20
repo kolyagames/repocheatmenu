@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
@@ -87,12 +95,18 @@ internal static class UtilityHolesHack
     // keeps snapping it back there every tick - jams it wherever it happened to be (ideally
     // closed) instead of actually closing an open one.
     private static readonly Dictionary<PhysGrabHinge, (Vector3 pos, Quaternion rot)> _doorLocks = new();
+    // Hinges are generated once per level, so a scene-wide FindObjectsByType every hack tick
+    // (~6-7/sec) is wasted work. Cache the list and refresh once a second.
+    private static PhysGrabHinge[] _hingeCache;
+    private static float _hingeNextScan;
+    private const float HingeScanInterval = 1f;
 
     public static void ApplyLockAllDoors()
     {
         if (!CheatState.LockAllDoors.Value)
         {
             _doorLocks.Clear();
+            _hingeCache = null;
             return;
         }
 
@@ -110,7 +124,13 @@ internal static class UtilityHolesHack
                 foreach (PhysGrabHinge key in dead) _doorLocks.Remove(key);
         }
 
-        foreach (PhysGrabHinge hinge in Object.FindObjectsByType<PhysGrabHinge>(FindObjectsSortMode.None))
+        float t = Time.unscaledTime;
+        if (_hingeCache == null || t >= _hingeNextScan)
+        {
+            _hingeCache = Object.FindObjectsByType<PhysGrabHinge>(FindObjectsSortMode.None);
+            _hingeNextScan = t + HingeScanInterval;
+        }
+        foreach (PhysGrabHinge hinge in _hingeCache)
         {
             if (hinge == null) continue;
 
@@ -122,7 +142,7 @@ internal static class UtilityHolesHack
 
             PhysGrabObject physObject = GameReflect.Get<PhysGrabObject>(hinge, "physGrabObject");
             if (physObject != null && (physObject.transform.position - locked.pos).sqrMagnitude > 0.01f)
-                physObject.Teleport(locked.pos, locked.rot);
+                GameReflect.TeleportSafe(physObject, locked.pos, locked.rot, "UtilityHolesHack");
         }
     }
 }

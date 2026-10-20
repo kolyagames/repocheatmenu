@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using Photon.Pun;
 using UnityEngine;
 
@@ -59,6 +67,10 @@ internal static class ShopKeeperWake
         ShopKeeper keeper = ShopKeeper.instance;
         if (keeper == null) return false;
         if (keeper.currentState != ShopKeeper.State.Sleeping) return false; // already on, or mid-wake
+        // The multi-step press needs a PhysGrabBeamActivateRPC off OUR grabber view; under a
+        // session ghost that RPC is filtered, so the master never updates initialPressTimer and
+        // the switch does nothing. No clean way around it, skip quietly.
+        if (GhostObserverHack.LocalRpcIsMuted) return false;
 
         if (Time.unscaledTime < _nextAttempt) return false;
         _nextAttempt = Time.unscaledTime + RetryInterval;

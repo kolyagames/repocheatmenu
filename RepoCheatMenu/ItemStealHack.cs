@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -57,10 +65,17 @@ internal static class ItemStealHack
 
             Vector3 from = held.transform.position;
             Vector3 pos = local.transform.position + local.transform.forward * 1.5f + Vector3.up * 0.5f;
-            held.Teleport(pos, local.transform.rotation);
+            GameReflect.TeleportSafe(held, pos, local.transform.rotation, "ItemStealHack");
 
-            PhysGrabber ownGrabber = GameReflect.Get<PhysGrabber>(local, "physGrabber");
-            ownGrabber?.OverrideGrab(held);
+            // Under a session ghost our PhysGrabber.OverrideGrab would be vetoed every frame by
+            // GhostObserverHack.Tick's own OverrideGrabDisable, and the GrabStartedRPC the game
+            // would send next is filtered anyway - so the yank itself still works (SetPositionRPC
+            // on the item's scene view goes through), but we don't pretend to grab it on top.
+            if (!GhostObserverHack.LocalRpcIsMuted)
+            {
+                PhysGrabber ownGrabber = GameReflect.Get<PhysGrabber>(local, "physGrabber");
+                ownGrabber?.OverrideGrab(held);
+            }
 
             ItemAttributes stolen = held.GetComponent<ItemAttributes>();
             EventLog.Write("items", $"stole '{(stolen != null && stolen.item != null ? stolen.item.itemName : held.name)}' " +

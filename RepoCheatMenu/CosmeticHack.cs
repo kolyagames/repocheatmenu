@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using System.Linq;
 using ExitGames.Client.Photon;
@@ -141,16 +149,22 @@ internal static class CosmeticHack
 
     private static bool _wingsActive;
     private static bool _wingsPink;
+    private static PlayerAvatar _wingsOn;
 
     private static void ApplyWings(PlayerAvatar local)
     {
         bool want = CheatState.ForceWings.Value;
         bool pink = CheatState.WingsPink.Value;
+        // Each level spawns a new avatar without the wings: the sent state only holds for the avatar it was
+        // sent to, otherwise the wings vanished at the first scene change.
+        if (local != _wingsOn) _wingsActive = false;
         if (want == _wingsActive && (!want || pink == _wingsPink)) return;
+        if (want && PlayerTargets.LocalAge() < 2f) return; // let the fresh avatar finish its own setup
 
         local.UpgradeTumbleWingsVisualsActive(want, pink);
         _wingsActive = want;
         _wingsPink = pink;
+        _wingsOn = local;
     }
 
     private static string _lastSyncedEyeColor;
@@ -170,7 +184,8 @@ internal static class CosmeticHack
             SetMaterialColor(eyes.eyeRight != null ? eyes.eyeRight.GetComponentInChildren<Renderer>() : null, color, "_Color", "_BaseColor", "_EmissionColor");
         }
 
-        if (name == _lastSyncedEyeColor || !PhotonNetwork.InRoom || local.photonView == null || local.photonView.Owner == null) return;
+        if (name == _lastSyncedEyeColor || !PhotonNetwork.InRoom || GhostObserverHack.SessionGhost
+            || local.photonView == null || local.photonView.Owner == null) return;
         _lastSyncedEyeColor = name;
 
         Hashtable props = new() { [EyeColorPropertyKey] = name };
@@ -228,7 +243,8 @@ internal static class CosmeticHack
         bool want = CheatState.BigPupils.Value;
         if (want) local.OverridePupilSize(PupilMultiplier, PupilPriority, 1f, 1f, 5f, 0.5f, 0.5f);
 
-        if (_lastSyncedBigPupils == want || !PhotonNetwork.InRoom || local.photonView == null || local.photonView.Owner == null) return;
+        if (_lastSyncedBigPupils == want || !PhotonNetwork.InRoom || GhostObserverHack.SessionGhost
+            || local.photonView == null || local.photonView.Owner == null) return;
         _lastSyncedBigPupils = want;
 
         Hashtable props = new() { [BigPupilsPropertyKey] = want };
@@ -253,14 +269,25 @@ internal static class CosmeticHack
     // a real RPC broadcast - when the host's actual loadout changes, not every tick.
     private static List<int> _lastMimickedHostCosmetics;
     private static int[] _lastMimickedHostColors;
+    private static PlayerAvatar _mimicSkinOn;
+    private static float _mimicSkinSince;
 
     private static void ApplyMimicHostSkin(PlayerAvatar local)
     {
         if (!CheatState.MimicHostSkin.Value) return;
         if (!GameManager.Multiplayer()) return; // no separate "host" loadout to copy in true singleplayer
-        if (local.photonView == null || local.photonView.Owner == PhotonNetwork.MasterClient) return; // we ARE the host
 
-        PlayerAvatar host = PlayerTargets.Host();
+        // A new level spawns a new avatar that dresses itself in OUR loadout shortly after it appears: forget
+        // what was copied and wait for that before copying again, or the copy is lost / overwritten.
+        if (local != _mimicSkinOn)
+        {
+            _mimicSkinOn = local;
+            _mimicSkinSince = UnityEngine.Time.unscaledTime;
+            _lastMimickedHostCosmetics = null;
+            _lastMimickedHostColors = null;
+        }
+        if (UnityEngine.Time.unscaledTime - _mimicSkinSince < 2f) return;
+        PlayerAvatar host = PlayerTargets.MimicSource(); // the host, or the picked player
         if (host == null || host.playerCosmetics == null || local.playerCosmetics == null) return;
 
         List<int> hostCosmetics = GameReflect.Get<List<int>>(host.playerCosmetics, "cosmeticEquippedRaw");

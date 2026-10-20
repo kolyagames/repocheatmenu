@@ -1,0 +1,137 @@
+<?xml version='1.0'?>
+<!--
+  Obfuscar config for the "ship it" build only (run by tools\obfuscate.ps1, called from
+  build-all.ps1 - NEVER from deploy.ps1's hot-reload path, which stays fast and unobfuscated
+  for local iteration/debugging).
+
+  This is a TEMPLATE - {{IN_PATH}}/{{OUT_PATH}}/{{HARMONY_DIR}} are absolute paths filled in by
+  obfuscate.ps1 at run time (Obfuscar v3+ rejects relative AssemblySearchPath entries, and a
+  hardcoded path would only work on one machine/username anyway). Never run this file directly.
+
+  Renames everything in RepoCheatMenu.dll EXCEPT the three places the mod itself reaches by
+  string name at runtime - rename any of these and the break is silent (no compile error, just
+  a toggle/script that quietly stops working the next time someone uses it):
+
+    - ScriptGlobals  - Roslyn compiles every player-typed/saved script against this exact
+                        class (typeof(ScriptGlobals) in ScriptEngine.cs). Renaming any public
+                        member here breaks every saved script module on every player's disk.
+    - CheatState     - CheatState.FindBool (CheatState.cs) does
+                        typeof(CheatState).GetField(name, BindingFlags.Public | BindingFlags.Static)
+                        where `name` is a caller-supplied string - ScriptGlobals.SetCheat/GetCheat
+                        and any saved script that calls them depend on the exact field names
+                        ("Fly", "GodMode", "EspPlayers", ...) staying intact.
+    - Plugin         - BepInEx's own entry point (BaseUnityPlugin subclass); excluded for zero
+                        risk, not because renaming it is known to break anything.
+
+  Nothing else in the assembly is reached by name from outside itself (verified by grepping for
+  GetType("RepoCheatMenu...")/GetField("...")/GetMethod("...") across the whole project before
+  writing this file - the two DynamicIsland.cs/PanicHack.cs GetFields() enumerations iterate
+  CheatState's fields generically and don't care what they're named, so they're fine either way).
+  Harmony patch classes are NOT safe to rename methods in (found live 2026-10-10): see the SkipType
+  with the long comment below - Harmony binds parameters by name and some patches are looked up
+  by string.
+
+  Renaming-only (no control-flow mangling, no method encryption, no string encryption) - this
+  codebase leans hard on Harmony patching + heavy reflection + Roslyn-compiled user scripts, and
+  the more aggressive ConfuserEx-style transforms carry real risk of silently breaking one of
+  those. This is intentionally the first, safest layer; stronger protection (string encryption,
+  anti-tamper) can be layered in later as its own separate pass once this one's proven solid.
+-->
+<Obfuscator>
+	<Var name="InPath" value="{{IN_PATH}}" />
+	<Var name="OutPath" value="{{OUT_PATH}}" />
+	<AssemblySearchPath path="{{IN_PATH}}" />
+	<AssemblySearchPath path="{{HARMONY_DIR}}" />
+
+	<!-- Only RepoCheatMenu.dll's own namespace is ours; everything resolved via
+	     AssemblySearchPath (BepInEx, UnityEngine, the game's own assemblies, Roslyn, HarmonyX)
+	     is read-only context for type resolution and is never written back out. -->
+	<Var name="KeepPublicApi" value="false" />
+	<Var name="HidePrivateApi" value="true" />
+	<Var name="RenameFields" value="true" />
+	<Var name="RenameProperties" value="true" />
+	<Var name="RenameEvents" value="true" />
+	<Var name="UseUnicodeNames" value="false" />
+	<Var name="UseKoreanNames" value="false" />
+	<Var name="HideStrings" value="false" />
+	<Var name="OptimizeMethods" value="false" />
+	<Var name="SuppressIldasm" value="true" />
+	<Var name="MarkedOnly" value="false" />
+
+	<Module file="$(InPath)\RepoCheatMenu.dll">
+		<!-- name-only (no skip* attrs) only protects the TYPE's own name - members still get
+		     renamed by default and that's exactly what broke ScriptGlobals.Local -> A() and
+		     every CheatState field the first time this config ran. These three need the type
+		     AND every member kind left alone. -->
+		<SkipType name="RepoCheatMenu.ScriptGlobals" skipMethods="true" skipFields="true" skipProperties="true" skipEvents="true" />
+		<SkipType name="RepoCheatMenu.CheatState" skipMethods="true" skipFields="true" skipProperties="true" skipEvents="true" />
+		<SkipType name="RepoCheatMenu.Plugin" skipMethods="true" skipFields="true" skipProperties="true" skipEvents="true" />
+		<!-- Every Harmony patch class lives in Patches.cs. Harmony binds a patch method's parameters BY NAME
+		     (__instance, ___field, and the original method's own parameter names such as valueLost) and
+		     finds some patch methods by string name (AccessTools.Method(typeof(X), "Prefix"), nameof(...)).
+		     Obfuscar blanks parameter names and renames methods, which made the very first patch fail with
+		     'Parameter "" not found in method ...Break' and the whole core abort at startup. So: no
+		     method renaming (and so no parameter stripping) in these classes. -->
+		<SkipType name="RepoCheatMenu.ImpactDetectorBreakPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.AntiKnockbackPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GentleDropPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.ImpactDetectorDestroyPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.RemovePillarLimitPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.PillarDropMultiplierPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.SpawnRateMultiplierPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.PhysicsGrabManipulationPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.PhysGrabLogicRangePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.PhysGrabRayCheckRangePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.PhysGrabUpdateRangePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.PlayerControllerFixedUpdatePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.PlayerControllerUpdatePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.AutoFarmMovementPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.TimeTickPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.AntiAimSpinPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.DinnerBonePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.FlipPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.InvisiblePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.InvisibleSafetyNet" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GlitchyFlashlightPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.FakePingPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.FakeOverchargePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.DiscoBeamPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GameButtonsBlockPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GhostVoicePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GhostRecorderPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GhostSessionLatchPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GhostNetFilterPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GhostVoiceViewPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GhostTransmitForcePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GhostRiderPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.TPosePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GhostCrawlPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.PhantomSprintPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.ThirdPersonAimPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.DeadVoiceHearPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GhostHearAllPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.GlitchyVoicePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.MasterOnlyRpcSelfBypassPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.ChargingStationInfinitePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.ChargingStationShutdownBlockPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.ChargingStationCrystalBrokenBlockPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.PlayerDeathHeadTriggerPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.AntiCrashExecuteRpcPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.AntiCrashOnEventPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.DeferredAntiCrashInstallPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.AntiCrashTextSanitize" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.IgnoreDeathPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.IgnoreHurtPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.IgnoreHealthSetPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.IgnoreImpulsePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.IgnoreTumbleSetPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.IgnoreTumbleForcePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.IgnoreTumbleTorquePatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.AntiCrashChatClampPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.AntiCrashNameClampPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.AntiCrashTruckAnnouncerClampPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.AntiCrashTruckCustomMessageClampPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.RunJournalDeathPatch" skipMethods="true" />
+		<SkipType name="RepoCheatMenu.ChatLogPatch" skipMethods="true" />
+	</Module>
+</Obfuscator>

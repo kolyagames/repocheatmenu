@@ -1,6 +1,17 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using HarmonyLib;
 using Photon.Pun;
 using Photon.Realtime;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
@@ -36,7 +47,8 @@ internal static class AntiKnockbackPatch
     [HarmonyPrefix]
     private static bool Prefix()
     {
-        return !CheatState.AntiKnockback.Value;
+        // A ghost is not in anyone else's world, so nothing should be able to shove it around in ours.
+        return !CheatState.AntiKnockback.Value && !GhostObserverHack.SessionGhost;
     }
 }
 
@@ -239,6 +251,37 @@ internal static class PhysGrabRayCheckRangePatch
     private static bool _maskActive;
     private static LayerMask _maskBackup;
 
+    // How far RayCheck may reach while UnlimitedGrabRange is on.
+    internal const float UnlimitedRayDistance = 500f;
+
+    // RayCheck starts with a hardcoded "float maxDistance = 10f;" that feeds both the discovery
+    // SphereCastAll and the grab Raycast, so no grabRange value ever let you reach past 10 units -
+    // the 999999 above only affected the later "hitInfo.distance > grabRange" check. That is why
+    // "unlimited" range felt capped. Same fix the InfiniteRange mod uses (studied only, own code):
+    // a transpiler swaps that first 10f constant for a call. RayCheck has exactly one 10f.
+    internal static float RayDistance() => _grabber != null ? UnlimitedRayDistance : 10f;
+
+    [HarmonyTranspiler]
+    private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+    {
+        var list = new List<CodeInstruction>(instructions);
+        MethodInfo getter = AccessTools.Method(typeof(PhysGrabRayCheckRangePatch), nameof(RayDistance));
+        for (int i = 0; i < list.Count; i++)
+        {
+            CodeInstruction ins = list[i];
+            if (ins.opcode == OpCodes.Ldc_R4 && ins.operand is float f && Mathf.Approximately(f, 10f))
+            {
+                var replacement = new CodeInstruction(OpCodes.Call, getter);
+                replacement.labels.AddRange(ins.labels);
+                replacement.blocks.AddRange(ins.blocks);
+                list[i] = replacement;
+                return list;
+            }
+        }
+        Plugin.Log.LogWarning("PhysGrabber.RayCheck: 10f ray-length constant not found - grab range stays capped at 10.");
+        return list;
+    }
+
     [HarmonyPrefix]
     private static void Prefix(PhysGrabber __instance, ref float ___grabRange, ref LayerMask ___mask)
     {
@@ -269,6 +312,43 @@ internal static class PhysGrabRayCheckRangePatch
             ___grabRange = _backup;
         if (_maskActive)
             ___mask = _maskBackup;
+    }
+}
+
+// PhysGrabber.Update clamps how far a grabbed object is held: "pullerDistance = Clamp(pullerDistance,
+// minDistanceFromPlayer, Min(grabRange, maxDistanceFromPlayer))" with maxDistanceFromPlayer = 2.5 by
+// default, so anything grabbed from far away was yanked back to 2.5 units in front of you. While
+// UnlimitedGrabRange is on, widen both for the duration of Update (backup/restore, local grabber
+// only) so a far object stays where you grabbed it and push/pull still adjusts from there - the
+// behaviour the InfiniteRange mod gets by rewriting both fields every frame.
+[HarmonyPatch(typeof(PhysGrabber), "Update")]
+internal static class PhysGrabUpdateRangePatch
+{
+    private static PhysGrabber _grabber;
+    private static float _rangeBackup;
+    private static float _maxBackup;
+
+    [HarmonyPrefix]
+    private static void Prefix(PhysGrabber __instance)
+    {
+        _grabber = null;
+        if (!CheatState.UnlimitedGrabRange.Value) return;
+        if (PlayerAvatar.instance == null || __instance != GameReflect.Get<PhysGrabber>(PlayerAvatar.instance, "physGrabber")) return;
+
+        _grabber = __instance;
+        _rangeBackup = __instance.grabRange;
+        _maxBackup = __instance.maxDistanceFromPlayer;
+        __instance.grabRange = 999999f;
+        __instance.maxDistanceFromPlayer = PhysGrabRayCheckRangePatch.UnlimitedRayDistance * 0.85f;
+    }
+
+    [HarmonyPostfix]
+    private static void Postfix()
+    {
+        if (_grabber == null) return;
+        _grabber.grabRange = _rangeBackup;
+        _grabber.maxDistanceFromPlayer = _maxBackup;
+        _grabber = null;
     }
 }
 
@@ -344,17 +424,61 @@ internal static class TimeTickPatch
     private static bool _escapeWasDown;
     private static bool _reactivateKeyWasDown;
     private static int _lastPollTick;
+    private static int _uiFrame = -1;
+    private static int _uiErrorFrame = -1000;
     private static int _tickCount;
 
     [HarmonyPostfix]
     private static void Postfix()
     {
+        // Latch mouse clicks / wheel / typed text on EVERY call: the UI below only runs once per 30 ms
+        // and Unity's per-frame "pressed" flags would be gone by then (see UiInput).
+        UiInput.Sample();
+
+        // The drawn UI (HUD cards, island, F6 menu) runs once per real FRAME, not on the 30 ms throttle
+        // below: at ~33 ticks a second every animation looked choppy. The first getter call of a new
+        // frame draws it; clicks latched during the previous frame are consumed here and then dropped.
+        int frame = UnityEngine.Time.frameCount;
+        if (frame != _uiFrame)
+        {
+            _uiFrame = frame;
+            if (!PanicHack.Hidden)
+            {
+                try
+                {
+                    HudRoot.Tick();
+                }
+                catch (System.Exception e)
+                {
+                    if (frame - _uiErrorFrame > 120)
+                    {
+                        _uiErrorFrame = frame;
+                        Plugin.Log.LogError("Exception in HudRoot.Tick: " + e);
+                    }
+                }
+            }
+            UiInput.ClearLatches();
+
+            if (!PanicHack.Hidden)
+            {
+                try { BlockScripts.Tick(); }
+                catch (System.Exception e)
+                {
+                    if (frame - _uiErrorFrame > 120)
+                    {
+                        _uiErrorFrame = frame;
+                        Plugin.Log.LogError("Exception in BlockScripts.Tick: " + e);
+                    }
+                }
+            }
+        }
+
         int now = System.Environment.TickCount;
         if (now - _lastPollTick < 30) return; // throttle to ~33 checks/sec, this getter fires far more often than that
         _lastPollTick = now;
 
         _tickCount++;
-        if (_tickCount % 90 == 0)
+        if (_tickCount % 3000 == 0)
             Plugin.Log.LogInfo($"Time.deltaTime tick heartbeat ({_tickCount}).");
 
         // ']' is the one thing still polled while PanicHack.Hidden - has to keep working no
@@ -387,12 +511,13 @@ internal static class TimeTickPatch
         if (PanicHack.Hidden) return;
 
         bool menuKeyDown = Win32.IsKeyDown(Plugin.MenuKey.Value);
-        if (menuKeyDown && !_menuKeyWasDown)
+        // Right Shift (the default menu key) is also how capitals get typed into a menu field.
+        if (menuKeyDown && !_menuKeyWasDown && !UiInput.TypingInMenu())
         {
             Plugin.Log.LogInfo("Menu hotkey detected via Time.deltaTime tick (Win32 GetAsyncKeyState) - toggling menu.");
             try
             {
-                OverlayUI.Toggle();
+                MenuRouter.Toggle();
             }
             catch (System.Exception e)
             {
@@ -411,11 +536,14 @@ internal static class TimeTickPatch
 
         bool escapeDown = Win32.IsKeyDown(UnityEngine.KeyCode.Escape);
         if (escapeDown && !_escapeWasDown)
-            OverlayUI.Close();
+        {
+            // Escape in a text field leaves the field; a second Escape closes the menus.
+            if (UiInput.TypingInMenu()) CustomGui.ClearFocus();
+            else MenuRouter.CloseAll();
+        }
         _escapeWasDown = escapeDown;
 
         OverlayUI.Tick();
-        HudRoot.Tick();
 
         // Stat application lives on this same confirmed-firing tick instead of
         // PlayerController.Update/StatsManager.PlayerAdd/ItemBattery.Update, none of which
@@ -472,7 +600,8 @@ internal static class TimeTickPatch
                 // (confirmed in the decompiled source), overriding whatever fake sunken/flying
                 // position Noclip/Fly had reached. Suppressing tumble entirely while either is on
                 // removes the only thing that was ever forcing you back.
-                controller.DebugNoTumble = CheatState.NoKnockdown.Value || CheatState.Fly.Value || CheatState.Noclip.Value;
+                controller.DebugNoTumble = CheatState.NoKnockdown.Value || CheatState.Fly.Value || CheatState.Noclip.Value
+                    || GhostFollowHack.Target() != null;
 
                 // No Fall Damage: confirmed in the decompiled PlayerAvatar.cs (the "isLocal"
                 // block reading CollisionController.fallDistance) - damage only applies once
@@ -510,7 +639,9 @@ internal static class TimeTickPatch
                 // PlayerHealth.Hurt() checks this built-in field directly and returns before
                 // applying any damage - same effect as our old Harmony prefix, no patch needed.
                 if (health != null)
-                    GameReflect.Set(health, "godMode", CheatState.GodMode.Value);
+                    // A ghost's body exists only here, but damage to the local player is decided locally: a trap or
+                    // an enemy swing on our screen could "kill" it, starting a death nobody else would ever see.
+                    GameReflect.Set(health, "godMode", CheatState.GodMode.Value || GhostObserverHack.SessionGhost);
             }
 
             // RoundDirector.debugInfiniteBattery is a built-in toggle that ItemBattery.Update()
@@ -529,6 +660,11 @@ internal static class TimeTickPatch
 
         RunSafe(nameof(EntityHack), EntityHack.Apply);
         RunSafe(nameof(VisionHack), VisionHack.Apply);
+        RunSafe(nameof(CameraExtrasHack), CameraExtrasHack.Apply);
+        RunSafe(nameof(AlertsHack), AlertsHack.Apply);
+        RunSafe(nameof(RunJournal), RunJournal.Apply);
+        RunSafe(nameof(ValuableDamageHack), ValuableDamageHack.Apply);
+        RunSafe(nameof(BackgroundHack), BackgroundHack.Apply);
         RunSafe(nameof(FlashlightHack), FlashlightHack.Apply);
         RunSafe(nameof(LaserHack), LaserHack.Apply);
         RunSafe(nameof(MeleeVibrateHack), MeleeVibrateHack.Apply);
@@ -556,7 +692,14 @@ internal static class TimeTickPatch
         RunSafe("NameChangerHack.ApplyMimicHost", NameChangerHack.ApplyMimicHost);
         RunSafe("CartHack.ApplyRam", CartHack.ApplyRam);
         RunSafe(nameof(DeadFlyHack), DeadFlyHack.Apply);
+        RunSafe(nameof(DeathRelocateHack), DeathRelocateHack.Apply);
         RunSafe(nameof(AutoLootHack), AutoLootHack.Apply);
+        RunSafe(nameof(PlayerCatcherHack), PlayerCatcherHack.Apply);
+        RunSafe(nameof(GhostObserverHack), GhostObserverHack.Tick);
+        RunSafe(nameof(GhostTelekinesisHack), GhostTelekinesisHack.Tick);
+        RunSafe(nameof(MicFixHack), MicFixHack.Apply);
+        RunSafe(nameof(HiddenPlayersHack), HiddenPlayersHack.Apply);
+        RunSafe(nameof(TeammatesOnMapHack), TeammatesOnMapHack.Apply);
         RunSafe(nameof(AutoFarmHack), AutoFarmHack.Apply);
         RunSafe(nameof(ExtractionRadarHack), ExtractionRadarHack.Apply);
         RunSafe(nameof(ExtractionActivatorHack), ExtractionActivatorHack.Apply);
@@ -589,6 +732,7 @@ internal static class TimeTickPatch
         RunSafe("TeleportHack.ApplySwarmStorm", TeleportHack.ApplySwarmStorm);
         RunSafe("UtilityHolesHack.ApplyLockAllDoors", UtilityHolesHack.ApplyLockAllDoors);
         RunSafe("TeleportHack.ApplyTrapRoom", TeleportHack.ApplyTrapRoom);
+        RunSafe(nameof(BlackHoleHack), BlackHoleHack.Apply);
         RunSafe("TeleportHack.ApplyEnemyDropKill", TeleportHack.ApplyEnemyDropKill);
         RunSafe("RaidHack.ApplyYeetAllPending", RaidHack.ApplyYeetAllPending);
         RunSafe("TeleportHack.ApplyPullPending", TeleportHack.ApplyPullPending);
@@ -597,11 +741,18 @@ internal static class TimeTickPatch
         RunSafe(nameof(ItemStealHack), ItemStealHack.Apply);
         RunSafe(nameof(VoiceFilterHack), VoiceFilterHack.Apply);
         RunSafe("VoiceFilterHack.ApplyChipmunk", VoiceFilterHack.ApplyChipmunk);
+        RunSafe(nameof(DemonVoiceHack), DemonVoiceHack.Apply);
         RunSafe(nameof(RepoDebugHack), RepoDebugHack.Apply);
         RunSafe(nameof(PacketTestHack), PacketTestHack.Apply);
         RunSafe(nameof(NetworkDiagnostics), NetworkDiagnostics.Apply);
         RunSafe(nameof(KolobokHack), KolobokHack.Apply);
         RunSafe(nameof(CosmeticHack), CosmeticHack.Apply);
+        RunSafe(nameof(ExpressionHack), ExpressionHack.Apply);
+        RunSafe(nameof(EyeOverrideHack), EyeOverrideHack.Apply);
+        RunSafe(nameof(AnimSpeedHack), AnimSpeedHack.Apply);
+        RunSafe(nameof(HonkHack), HonkHack.ApplyStorm);
+        RunSafe(nameof(FakeMotionHack), FakeMotionHack.Apply);
+        RunSafe(nameof(AllEyesHack), AllEyesHack.Apply);
         RunSafe(nameof(DebugBridge), DebugBridge.Apply);
         RunSafe(nameof(EventLog), EventLog.Apply);
     }
@@ -865,13 +1016,28 @@ internal static class InvisiblePatch
 
     private static bool _active;
     private static Vector3 _backup;
+    private static Vector3 _backupVel;
+    private static Vector3 _backupAngVel;
     private static float _talkGraceUntil;
+    private static float _lastBroadcast;
+
+    // What the last network send really did, for the HUD: true = other players were sent the fake height,
+    // false = the real position went out (talk reveal). Stale after a second without any send.
+    internal static bool BroadcastIsHidden => _active && Time.unscaledTime - _lastBroadcast < 1f;
 
     [HarmonyPrefix]
     private static void Prefix(PhotonStream stream)
     {
         _active = false;
-        if (!CheatState.Invisible.Value) return;
+        // When Invisible has just been turned off, drop any lingering talk-grace window so the next
+        // time the toggle comes back on the spoof fires on the first eligible network tick instead of
+        // being suppressed for up to 1.5 s by stale "you were just talking" state.
+        if (!CheatState.Invisible.Value && !CheatState.Fly.Value && !CheatState.Noclip.Value) _talkGraceUntil = 0f;
+        // Fly/Noclip put the real body in plain sight of everyone (through walls, mid-air), so they hide it
+        // too unless FlyAutoHide is off. Safe to do without Invisible: both keep the Rigidbody kinematic,
+        // which is exactly the state the fake-height write cannot drag the real body through.
+        bool hideForFlight = CheatState.FlyAutoHide.Value && (CheatState.Fly.Value || CheatState.Noclip.Value);
+        if (!CheatState.Invisible.Value && !hideForFlight) return;
 
         PlayerController controller = PlayerController.instance;
         if (!stream.IsWriting || controller == null) return;
@@ -894,33 +1060,57 @@ internal static class InvisiblePatch
         }
 
         _active = true;
+        _lastBroadcast = Time.unscaledTime;
         _backup = controller.transform.position;
-        Vector3 fake = new Vector3(_backup.x, CheatState.InvisibleHeight.Value, _backup.z);
+        if (controller.rb != null)
+        {
+            _backupVel = controller.rb.velocity;
+            _backupAngVel = controller.rb.angularVelocity;
+        }
+        else
+        {
+            _backupVel = _backupAngVel = Vector3.zero;
+        }
+        // Over-ceiling mode: a few metres above the real spot, so the voice (which follows this same
+        // position on listeners' machines) stays within hearing range. Sky mode: absolute height.
+        float fakeY = CheatState.InvisibleOverCeiling.Value
+            ? _backup.y + CheatState.InvisibleOverCeilingHeight.Value
+            : CheatState.InvisibleHeight.Value;
+        Vector3 fake = new Vector3(_backup.x, fakeY, _backup.z);
         controller.transform.position = fake;
         if (controller.rb != null) controller.rb.position = fake;
     }
 
-    [HarmonyPostfix]
-    private static void Postfix()
+    // Finalizer, not Postfix: if the original OnPhotonSerializeView ever throws, a plain Postfix
+    // is skipped and the player stays stuck in the sky position (transform.position + rb.position
+    // = fake height) until the next network tick re-enters Prefix. A finalizer runs even on
+    // throw, which guarantees the restore always lands in the same tick as the spoof.
+    [HarmonyFinalizer]
+    private static void Finalizer()
     {
         if (!_active) return;
-        PlayerController controller = PlayerController.instance;
-        if (controller == null) return;
-        controller.transform.position = _backup;
-        if (controller.rb != null)
+        _active = false;
+        try
         {
+            PlayerController controller = PlayerController.instance;
+            if (controller == null) return;
+            controller.transform.position = _backup;
+            if (controller.rb == null) return;
             controller.rb.position = _backup;
-            // Defensive addition after a second live report of being genuinely yeeted upward (not
-            // just visually, for real) despite the position/rb.position mirror already in place -
-            // writing raw .position twice in one frame on a non-kinematic Rigidbody (grounded/
-            // walking, isKinematic is false here - Fly/Noclip's own kinematic path never had this
-            // problem) can leave PhysX inferring a large implied velocity from the position delta
-            // between the two writes. Zeroing velocity right after the restore, same defensive
-            // pattern Fly already uses for its own direct-position-write approach, cancels
-            // whatever spurious impulse that round trip may have produced instead of letting it
-            // carry into the next physics step.
-            controller.rb.velocity = Vector3.zero;
-            controller.rb.angularVelocity = Vector3.zero;
+            // Earlier revisions zeroed velocity here as a blanket defence against PhysX inferring an
+            // impulse from the sky-and-back position swap. That ran on every network tick (~15 Hz),
+            // which also wiped the player's REAL velocity whenever they were jumping, falling or
+            // being shoved - the "jumps don't register / impulses eat themselves" bug while
+            // Invisible. Restore the velocity that was present at Prefix time instead: the
+            // physics engine saw the write pair as a round trip inside one engine frame, with no
+            // intervening physics step, so the sampled velocity is still the pre-swap physical
+            // reality.
+            controller.rb.velocity = _backupVel;
+            controller.rb.angularVelocity = _backupAngVel;
+        }
+        catch (System.Exception ex)
+        {
+            Plugin.Log.LogWarning("[Invisible] finalizer restore failed: " + ex.GetType().Name + " " + ex.Message);
         }
     }
 }
@@ -962,7 +1152,7 @@ internal static class InvisibleSafetyNet
         // net exists to catch the UNINTENDED strand, not to fight a feature doing exactly what
         // it's supposed to. Treat wherever they take you as "good" so the net doesn't immediately
         // yank you back down the instant one of them is turned back off near a real high point.
-        if (CheatState.Fly.Value || CheatState.Noclip.Value || CheatState.DeadFly.Value)
+        if (CheatState.Fly.Value || CheatState.Noclip.Value || CheatState.DeadFly.Value || GhostFollowHack.Target() != null)
         {
             _lastGoodPosition = controller.transform.position;
             _hasGoodPosition = true;
@@ -971,7 +1161,19 @@ internal static class InvisibleSafetyNet
 
         Vector3 current = controller.transform.position;
 
-        if (_hasGoodPosition && current.y > SafeCeiling)
+        // Over-ceiling mode never gets near SafeCeiling, so a drag toward the fake height shows up as a
+        // one-tick rise of roughly InvisibleOverCeilingHeight with no sideways movement - nothing legitimate
+        // lifts you 5+ metres in 30 ms without moving.
+        bool overCeilingDrag = false;
+        if (CheatState.InvisibleOverCeiling.Value && _hasGoodPosition)
+        {
+            float h = CheatState.InvisibleOverCeilingHeight.Value;
+            float rise = current.y - _lastGoodPosition.y;
+            float side = Mathf.Abs(current.x - _lastGoodPosition.x) + Mathf.Abs(current.z - _lastGoodPosition.z);
+            overCeilingDrag = rise > h * 0.6f && rise < h * 1.5f && side < 1.5f;
+        }
+
+        if (_hasGoodPosition && (current.y > SafeCeiling || overCeilingDrag))
         {
             controller.transform.position = _lastGoodPosition;
             if (controller.rb != null)
@@ -1038,6 +1240,108 @@ internal static class GlitchyFlashlightPatch
         if (!_active) return;
         if (__instance.flashlightLightAim != null)
             __instance.flashlightLightAim.clientAimPoint = _backup;
+    }
+}
+
+// "Fake Ping" - a genuinely different kind of field from everything else on this same broadcast
+// call: not animation state, not a Transform/Rigidbody position, a plain UI display number.
+// PlayerAvatar.OnPhotonSerializeView also sends "playerPing" (confirmed internal int in the
+// decompiled source, recomputed from PhotonNetwork.GetPing() once every 6 seconds on your own
+// machine) - confirmed in MenuPageLobby.SetPingText that this is exactly the number shown next to
+// your name in the lobby player list, colour-coded green/yellow/orange/red at the 50/100/200ms
+// thresholds. No position or Rigidbody field is touched at all, so none of the physics-desync class
+// of bug the other Troll spoofs had to get hardened against (Invisible/Flip's rb.position mirror +
+// velocity zeroing) applies here - this can only ever change a text label's number and colour.
+[HarmonyPatch(typeof(PlayerAvatar), "OnPhotonSerializeView")]
+internal static class FakePingPatch
+{
+    private static bool _active;
+    private static int _backup;
+
+    [HarmonyPrefix]
+    private static void Prefix(PhotonStream stream, ref int ___playerPing)
+    {
+        _active = false;
+        if (!CheatState.FakePing.Value) return;
+        if (!stream.IsWriting) return;
+
+        _active = true;
+        _backup = ___playerPing;
+        ___playerPing = CheatState.FakePingValue.Value;
+    }
+
+    [HarmonyPostfix]
+    private static void Postfix(ref int ___playerPing)
+    {
+        if (_active) ___playerPing = _backup;
+    }
+}
+
+// "Fake Overcharge" - a DIFFERENT component's broadcast from everything else in this file:
+// PhysGrabber (the grab-beam component, not PlayerAvatar) has its own OnPhotonSerializeView that
+// also sends "physGrabBeamOverCharge" (confirmed internal byte in the decompiled source). Confirmed
+// in PlayerAvatarOverchargeVisuals.cs (its Update() has no isLocal gate at all, unlike most of this
+// mod's other spoofs) that this one byte alone drives a real Light, a ParticleSystem AND a looping
+// Sound at the grab-beam origin on your hand - so everyone else in the room sees and HEARS your
+// hand glowing/sparking/humming like it's overheating, continuously, whether or not you're even
+// holding anything. Same guard as PhysGrabber's other patches (MasterAndOwnerOnlyRPC - you always
+// own your own grabber) and same backup/restore-around-the-call shape as every other spoof here.
+// No position/Rigidbody field involved - purely a light/particle/audio intensity byte, same safety
+// class as Fake Ping, not the position-spoof class that needed the rb.position/velocity hardening.
+[HarmonyPatch(typeof(PhysGrabber), "OnPhotonSerializeView")]
+internal static class FakeOverchargePatch
+{
+    private static bool _active;
+    private static byte _backup;
+
+    [HarmonyPrefix]
+    private static void Prefix(PhotonStream stream, ref byte ___physGrabBeamOverCharge)
+    {
+        _active = false;
+        if (!CheatState.FakeOvercharge.Value) return;
+        if (!stream.IsWriting) return;
+
+        _active = true;
+        _backup = ___physGrabBeamOverCharge;
+        ___physGrabBeamOverCharge = (byte)Mathf.Clamp(CheatState.FakeOverchargeValue.Value, 0, 255);
+    }
+
+    [HarmonyPostfix]
+    private static void Postfix(ref byte ___physGrabBeamOverCharge)
+    {
+        if (_active) ___physGrabBeamOverCharge = _backup;
+    }
+}
+
+// "Диско-луч": PhysGrabber.colorState (public int) goes out through the same serializer as the
+// overcharge byte above. Only the written value is swapped; the real field is restored afterwards.
+[HarmonyPatch(typeof(PhysGrabber), "OnPhotonSerializeView")]
+internal static class DiscoBeamPatch
+{
+    private static bool _active;
+    private static int _backup;
+
+    [HarmonyPrefix]
+    private static void Prefix(PhotonStream stream, ref int ___colorState)
+    {
+        _active = false;
+        if (!CheatState.DiscoBeam.Value) return;
+        if (!stream.IsWriting) return;
+
+        int mode = CheatState.DiscoBeamMode.Value;
+        int shown = mode >= 1 && mode <= 3
+            ? mode
+            : (int)(Time.unscaledTime * Mathf.Max(0.1f, CheatState.DiscoBeamSpeed.Value)) & 3;
+
+        _active = true;
+        _backup = ___colorState;
+        ___colorState = shown;
+    }
+
+    [HarmonyPostfix]
+    private static void Postfix(ref int ___colorState)
+    {
+        if (_active) ___colorState = _backup;
     }
 }
 
@@ -1211,6 +1515,57 @@ internal static class GhostCrawlPatch
     }
 }
 
+// "Phantom Sprint": T-Pose's mirror image the OTHER direction - instead of zeroing every
+// movement/animation flag, forces isMoving+isSprinting TRUE and a plausible forward rbVelocity
+// (own facing direction, PlayerController.instance.transform.forward - a Vector3 field is
+// serialized as-is regardless of direction, this just keeps the leg-cycle blend pointed somewhere
+// sane instead of straight up/sideways). Same fields AnimationLogic already reads for T-Pose/
+// GhostCrawl (confirmed decompiled source, "Moving"/"Sprinting" animator bools + a
+// SprintingImpulse trigger on the rising edge), so everyone else's Animator locally settles into
+// the full sprint cycle - standing still sprints in place, walking sprints at full pace with no
+// actual speed change, since position is the same untouched separate field it always is for this
+// whole broadcast. Your own real animation/movement/collision is never touched, only the outgoing
+// stream. Works for guest or host. Don't run alongside T-Pose or GhostCrawl - all three mutate the
+// same broadcast flags, whichever Prefix runs last wins.
+[HarmonyPatch(typeof(PlayerAvatar), "OnPhotonSerializeView")]
+internal static class PhantomSprintPatch
+{
+    private static bool _active;
+    private static bool _backupMoving, _backupSprinting;
+    private static Vector3 _backupVelocity;
+
+    [HarmonyPrefix]
+    private static void Prefix(PhotonStream stream, ref bool ___isMoving, ref bool ___isSprinting,
+        ref Vector3 ___rbVelocity)
+    {
+        _active = false;
+        if (!CheatState.PhantomSprint.Value) return;
+        if (!stream.IsWriting) return;
+
+        PlayerController controller = PlayerController.instance;
+        if (controller == null) return;
+
+        _active = true;
+        _backupMoving = ___isMoving;
+        _backupSprinting = ___isSprinting;
+        _backupVelocity = ___rbVelocity;
+
+        ___isMoving = true;
+        ___isSprinting = true;
+        ___rbVelocity = controller.transform.forward * 6f;
+    }
+
+    [HarmonyPostfix]
+    private static void Postfix(ref bool ___isMoving, ref bool ___isSprinting, ref Vector3 ___rbVelocity)
+    {
+        if (!_active) return;
+
+        ___isMoving = _backupMoving;
+        ___isSprinting = _backupSprinting;
+        ___rbVelocity = _backupVelocity;
+    }
+}
+
 // Third Person's grab/aim fix: PlayerLocalCamera.GetOverrideTransform() (confirmed via a grep
 // across the whole decompiled source) is THE canonical "where is the player aiming from" accessor
 // - not something grab-specific, every tool, weapon, vehicle seat, and revive item reads it too.
@@ -1248,6 +1603,21 @@ internal static class ThirdPersonAimPatch
         _aimProxy.SetPositionAndRotation(VisionHack.TrueAimPosition.Value, VisionHack.TrueAimRotation.Value);
         __result = _aimProxy;
     }
+
+    // Seen in ghost sessions: the local avatar's PlayerLocalCamera is already destroyed while
+    // InfoTextTriggerFinder (5 times a second) and other per-frame callers still ask it for the aim
+    // origin, and the game's own `base.transform` throws a NullReferenceException every time. Only when
+    // the original threw: hand back the camera the player actually looks through instead.
+    [HarmonyFinalizer]
+    private static System.Exception Finalizer(System.Exception __exception, ref Transform __result)
+    {
+        if (__exception is System.NullReferenceException && Camera.main != null)
+        {
+            __result = Camera.main.transform;
+            return null;
+        }
+        return __exception;
+    }
 }
 
 [HarmonyPatch(typeof(PlayerVoiceChat), "Update")]
@@ -1266,6 +1636,55 @@ internal static class DeadVoiceHearPatch
         ___audioSource.mute = false;
         if (___audioSource.volume < 0.01f)
             ___audioSource.volume = 1f;
+    }
+}
+
+// "Ghost hear-all": while the local player is dead (isDisabled), force every REMOTE PlayerVoiceChat
+// to be audible regardless of 3D position. Vanilla puts remote voices at spatialBlend=1 with 3D
+// rolloff; your audio listener rides SpectateCamera which can be far from the actual bodies, so
+// alive teammates sound distant or inaudible. On top of that, PlayerAvatarTalkAnimation reads
+// clipLoudness off the SAME AudioSource (confirmed in the decompiled source) - no audio locally,
+// no mouth animation locally. Postfix after Update so the game's own writes to spatialBlend don't
+// clobber ours. Our own voice chat (PlayerVoiceChat.instance) is skipped - its audioSource.volume
+// is forced to 0 in Awake() and touching routing there is what broke VoiceFilterHack historically.
+[HarmonyPatch(typeof(PlayerVoiceChat), "Update")]
+internal static class GhostHearAllPatch
+{
+    [HarmonyPostfix]
+    private static void Postfix(PlayerVoiceChat __instance, AudioSource ___audioSource)
+    {
+        if (!CheatState.GhostHearAll.Value) return;
+        if (___audioSource == null) return;
+        if (__instance == PlayerVoiceChat.instance) return;
+
+        // Dead (spectating) or a ghost observer: either way we only listen, from wherever the camera is.
+        PlayerAvatar me = PlayerAvatar.instance;
+        if (me == null) return;
+        if (!GhostObserverHack.SessionGhost && !GameReflect.Get<bool>(me, "isDisabled")) return;
+
+        ___audioSource.spatialBlend = 0f;
+        ___audioSource.mute = false;
+        if (___audioSource.volume < 0.5f) ___audioSource.volume = 1f;
+
+        // AudioLowPassLogic.Volume is internal to Assembly-CSharp, so bump it through reflection
+        // instead of a direct field write. The game's own PlayerVoiceChat.Update sets it to
+        // voiceGain * micMultiplier (voiceGain starts 0.5f for remote), which is fine - we only
+        // step in when it has decayed to near-zero.
+        GhostHearAllPatch.LiftLowPass(__instance.lowPassLogic);
+        GhostHearAllPatch.LiftLowPass(__instance.lowPassLogicTTS);
+
+        if (__instance.ttsAudioSource != null)
+        {
+            __instance.ttsAudioSource.spatialBlend = 0f;
+            __instance.ttsAudioSource.mute = false;
+        }
+    }
+
+    internal static void LiftLowPass(AudioLowPassLogic lowPass)
+    {
+        if (lowPass == null) return;
+        float v = GameReflect.Get<float>(lowPass, "Volume");
+        if (v < 1f) GameReflect.Set(lowPass, "Volume", 1f);
     }
 }
 
@@ -1359,8 +1778,8 @@ internal static class PlayerDeathHeadTriggerPatch
             }
             else if (CheatState.DeathAutoToExtraction.Value)
             {
-                ExtractionPoint point = SemiFunc.ExtractionPointGetNearest(___triggeredPosition);
-                if (point != null) ___triggeredPosition = point.transform.position;
+                Vector3? inside = DeathRelocateHack.ExtractionPosition(avatar);
+                if (inside != null) ___triggeredPosition = inside.Value;
             }
         }
 
@@ -1372,10 +1791,8 @@ internal static class PlayerDeathHeadTriggerPatch
         GameObject prefab = AssetManager.instance != null ? AssetManager.instance.enemyValuableSmall : null;
         if (prefab == null) return;
 
-        if (GameManager.Multiplayer())
-            PhotonNetwork.InstantiateRoomObject("Valuables/" + prefab.name, position, Quaternion.identity, 0);
-        else
-            UnityEngine.Object.Instantiate(prefab, position, Quaternion.identity);
+        // InstantiateRoomObject returns null for a guest; NetSpawn picks the route that works.
+        NetSpawn.Spawn("Valuables/" + prefab.name, prefab, position, Quaternion.identity);
     }
 }
 
@@ -1410,7 +1827,10 @@ internal static class AntiCrashExecuteRpcPatch
     {
         if (!CheatState.AntiCrash.Value) return true;
 
-        int actor = sender != null ? sender.ActorNumber : -1;
+        // The host is exempt from the RATE limit (argument sizes are still checked): it legitimately
+        // bursts far past any per-second ceiling while sending a level's state, and dropping those RPCs
+        // desyncs us. A hostile host has every other lever anyway.
+        int actor = sender != null && !sender.IsMasterClient ? sender.ActorNumber : -1;
 
         int argCount = 0;
         string longest = null;
@@ -1454,11 +1874,20 @@ internal static class AntiCrashOnEventPatch
 
     private static bool Prefix(ExitGames.Client.Photon.EventData photonEvent)
     {
+        NetEventLog.Note(photonEvent); // read-only debug log, see NetEventLog.cs
+        PingSystem.OnEvent(photonEvent); // pings from other mod users, see PingSystem.cs
         if (!CheatState.AntiCrash.Value || photonEvent == null) return true;
 
         // Code 200 (RPC) routes into ExecuteRpc, already gated above - don't double-count it here.
         // 202 is networked Instantiate, the classic spawn-flood crash vector.
         if (photonEvent.Code != 202) return true;
+
+        // Level generation spawns one room object per frame on the host (LevelGenerator/ValuableDirector:
+        // InstantiateRoomObject then `yield return null`), i.e. at the host's frame rate, and a join replays
+        // the whole cached level at once. The old 60/s cap silently dropped level modules and valuables on
+        // our side. Only other guests are rate limited.
+        Room room = PhotonNetwork.CurrentRoom;
+        if (room != null && photonEvent.Sender == room.MasterClientId) return true;
 
         return AntiCrashHack.CheckInstantiate(photonEvent.Sender,
             CheatState.AntiCrashMaxInstantiatesPerSecond.Value,
@@ -1555,5 +1984,115 @@ internal static class AntiCrashNameClampPatch
         // steamID is never rendered as rich text (it's an internal key, not display text) - length
         // clamp only, stripping tags here would just corrupt a real ID for no security benefit.
         if (_steamID != null && _steamID.Length > 64) _steamID = _steamID.Substring(0, 64);
+    }
+}
+
+// A THIRD same-shaped hole found live-auditing this file, same session as the two above: the game
+// has a SECOND, differently-signed `ChatMessageSendRPC` on `TruckScreenText` (decompile confirms
+// two unrelated PunRPC methods share this exact name - overload resolution by declaring type, not
+// a typo) that funnels its `playerName` argument straight into a rich-text string
+// (`TruckScreenText.ChatMessageSend`: `"<color=#"+hex+"><b>"+playerName+":</b></color>"`) with
+// zero sanitization of its own - the identical "attacker-controlled string reaches a TextMeshPro
+// field unstripped" shape the two patches above exist to close, just on the truck announcer
+// display instead of the chat log or player name, and completely unprotected by them since Harmony
+// patches bind to a specific declaring type, not just a method name. Gate is
+// `SemiFunc.MasterOnlyRPC(_info)` - context-only, not sender-verified (same weak-guard family
+// documented for Revive/Freeze/Reroll elsewhere in this project) - a guest can `photonView.RPC`
+// this call targeted at the master and have it execute for real there, no self-bypass needed since
+// we're not the one calling it, just closing the same crash surface for whoever's hosting.
+[HarmonyPatch(typeof(TruckScreenText), "ChatMessageSendRPC")]
+internal static class AntiCrashTruckAnnouncerClampPatch
+{
+    [HarmonyPrefix]
+    private static void Prefix(ref string playerName)
+    {
+        if (!CheatState.AntiCrash.Value || playerName == null) return;
+        playerName = AntiCrashTextSanitize.Strip(playerName);
+        if (playerName.Length > 64) playerName = playerName.Substring(0, 64);
+    }
+}
+
+// FOURTH hole, worse than the third: `TruckScreenText.MessageSendCustomRPC(playerName, message)` -
+// this is the Taxman/shop-message pipeline (decompile: `MessageSendCustom` builds `message` from
+// fixed strings plus emoji tokens and RPCs it to everyone). The game DOES defend `playerName`
+// against spoofing here (re-derives it from `_info.Sender`'s own real `PlayerAvatar.playerName`
+// whenever the sender isn't master - a real sender-based guard, not just a context check) - but
+// `message` gets ZERO validation of any kind, from the game or from us, before landing straight in
+// `textMesh.text = textMesh.text + currentNickname + SemiFunc.EmojiText(message)` - worse than the
+// two RPCs above, which at least funnel through some clamp once AntiCrash is on. Any player (guest
+// or master - `playerName`'s spoof-guard doesn't apply to `message` at all) can `photonView.RPC`
+// this directly with a crafted `message`, `RpcTarget.All` means it lands on every client in the
+// room's TextMeshProUGUI unfiltered. playerName still gets clamped too, purely defense-in-depth for
+// the one path the game trusts as-is (sender == master, its own `playerName` used unmodified).
+[HarmonyPatch(typeof(TruckScreenText), "MessageSendCustomRPC")]
+internal static class AntiCrashTruckCustomMessageClampPatch
+{
+    [HarmonyPrefix]
+    private static void Prefix(ref string playerName, ref string message)
+    {
+        if (!CheatState.AntiCrash.Value) return;
+        if (playerName != null)
+        {
+            playerName = AntiCrashTextSanitize.Strip(playerName);
+            if (playerName.Length > 64) playerName = playerName.Substring(0, 64);
+        }
+        if (message != null)
+        {
+            message = AntiCrashTextSanitize.Strip(message);
+            if (message.Length > 200) message = message.Substring(0, 200);
+        }
+    }
+}
+
+// Run journal / death recap (RunJournal.cs): who died to what. Read-only. The RPC's own guard
+// (MasterAndOwnerOnlyRPC) can make it return without killing anyone - e.g. a spoofed call - so the
+// prefix remembers deadSet and the postfix only reports a real false -> true change.
+[HarmonyPatch(typeof(PlayerAvatar), "PlayerDeathRPC")]
+internal static class RunJournalDeathPatch
+{
+    [HarmonyPrefix]
+    private static void Prefix(PlayerAvatar __instance, ref bool __state)
+    {
+        __state = __instance != null && GameReflect.Get<bool>(__instance, "deadSet");
+    }
+
+    [HarmonyPostfix]
+    private static void Postfix(PlayerAvatar __instance, int enemyIndex, bool __state)
+    {
+        try
+        {
+            if (__instance == null || __state || !GameReflect.Get<bool>(__instance, "deadSet")) return;
+            RunJournal.OnDeath(__instance, enemyIndex);
+        }
+        catch (System.Exception e)
+        {
+            Plugin.Log.LogWarning("RunJournal death hook: " + e.Message);
+        }
+    }
+}
+
+// Chat log / local TTS mute (ChatLogHack.cs). Low priority so AntiCrashChatClampPatch has already cleaned
+// the text. Applies the same guard the original uses before treating the message as real; returning false
+// only skips the speech on this machine.
+[HarmonyPatch(typeof(PlayerAvatar), "ChatMessageSendRPC")]
+internal static class ChatLogPatch
+{
+    [HarmonyPrefix]
+    [HarmonyPriority(Priority.Low)]
+    private static bool Prefix(PlayerAvatar __instance, string _message, PhotonMessageInfo _info)
+    {
+        try
+        {
+            if (__instance == null) return true;
+            PhotonView view = GameReflect.Get<PhotonView>(__instance, "photonView");
+            if (view == null || !SemiFunc.MasterAndOwnerOnlyRPC(_info, view)) return true;
+            if (GameDirector.instance == null || GameDirector.instance.currentState != GameDirector.gameState.Main) return true;
+            return ChatLogHack.OnMessage(__instance, _message);
+        }
+        catch (System.Exception e)
+        {
+            Plugin.Log.LogWarning("ChatLog hook: " + e.Message);
+            return true;
+        }
     }
 }

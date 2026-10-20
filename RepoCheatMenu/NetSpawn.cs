@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using Photon.Pun;
 using UnityEngine;
 
@@ -37,6 +45,15 @@ internal static class NetSpawn
         {
             route = "roomObject";
             spawned = PhotonNetwork.InstantiateRoomObject(resourcePath, position, rotation, 0);
+        }
+        else if (GhostObserverHack.SessionGhost)
+        {
+            // Instantiate (event code 202) is dropped by GhostNetFilterPatch for a session ghost -
+            // a local Instantiate would still create something on OUR screen but nobody else would
+            // see it, which is worse than nothing (we think the spawner worked, cheated prices show
+            // in HUD, team sees no object). Fail honestly instead.
+            route = "ghost-skipped";
+            spawned = null;
         }
         else
         {

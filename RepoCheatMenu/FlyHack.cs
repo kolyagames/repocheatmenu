@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using UnityEngine;
 
 namespace RepoCheatMenu;
@@ -13,8 +21,8 @@ namespace RepoCheatMenu;
 // collision resolution regardless of its collider, so Fly now inherently passes through walls
 // too (folding in what Noclip used to be needed for on top of Fly specifically).
 //
-// Noclip alone (no Fly) keeps its own separate fall-through-floor path - still useful by itself
-// to sink through the floor without flying around. 2026-09-09: root-caused why it used to look
+// Noclip now uses the same free-flight path as Fly (it used to only sink through the floor, which
+// was not a usable noclip). 2026-09-09: root-caused why it used to look
 // like it "snapped back to the floor" after a moment - it only ever touched
 // PlayerController.rb/transform, never PlayerTumble's own separate ragdoll rigidbody, which kept
 // resting on the REAL floor undisturbed the whole time. Any tumble (a trip, a hit, fall damage)
@@ -47,7 +55,6 @@ internal static class FlyHack
     private static bool _wasFlying;
     private static bool _wasKinematic;
     private static bool _colliderDisabled;
-    private static float _noclipFallSpeed;
 
     // Called from the PlayerController.Update postfix - see Patches.cs.
     public static void ApplyUpdate(PlayerController controller)
@@ -56,7 +63,8 @@ internal static class FlyHack
 
         bool noclip = CheatState.Noclip.Value;
         bool fly = CheatState.Fly.Value;
-        bool wantKinematic = fly || noclip;
+        PlayerAvatar followTarget = GhostFollowHack.Target();
+        bool wantKinematic = fly || noclip || followTarget != null;
 
         // Applied EVERY frame while active, not just on the transition. Measured live: with the
         // old edge-triggered writes, useGravity (written unconditionally below) stuck at false as
@@ -67,7 +75,6 @@ internal static class FlyHack
         // these fields while the cheat is off.
         if (wantKinematic)
         {
-            if (!_wasKinematic) _noclipFallSpeed = 0f;
             controller.rb.isKinematic = true;
             _wasKinematic = true;
 
@@ -98,7 +105,6 @@ internal static class FlyHack
         {
             controller.rb.isKinematic = false;
             _wasKinematic = false;
-            _noclipFallSpeed = 0f;
         }
 
         // Was fly-only - Noclip alone left the collider enabled with no stated reason. Kinematic
@@ -117,37 +123,50 @@ internal static class FlyHack
             _colliderDisabled = false;
         }
 
-        if (fly)
+        if (followTarget != null)
         {
+            controller.rb.useGravity = false;
+            controller.rb.velocity = Vector3.zero;
+            GhostFollowHack.Move(controller, followTarget);
+            _wasFlying = true;
+        }
+        else if (fly || noclip)
+        {
+            // Fly and Noclip share one free-movement path: gravity off, kinematic body, collider
+            // off, so you glide through walls and floors along the camera's full look direction
+            // (the same model SO_Noclip uses - studied only, own implementation). Noclip used to be
+            // a "sink through the floor" mode with no way to move; that was not a usable noclip.
             controller.rb.useGravity = false;
             controller.rb.velocity = Vector3.zero;
 
             Camera cam = GameDirector.instance != null ? GameDirector.instance.MainCamera : null;
             Vector3 dir = Vector3.zero;
-            if (cam != null)
+            // Don't read movement input while the game chat is open or the mod's menu is capturing a
+            // text field: Space (Jump) was going straight through to the Fly path, so typing "привет"
+            // sent you flying every time it hit the spacebar. Still keep flying - we just stop
+            // steering it until the player closes the input.
+            bool typing = UiInput.TypingInMenu();
+            if (cam != null && !typing)
             {
                 float forwardIn = SemiFunc.InputMovementY();
                 float strafeIn = SemiFunc.InputMovementX();
                 dir = cam.transform.forward * forwardIn + cam.transform.right * strafeIn;
             }
-            if (SemiFunc.InputDown(InputKey.Jump)) dir += Vector3.up;
-            if (SemiFunc.InputDown(InputKey.Crouch)) dir += Vector3.down;
+            // InputHold, not InputDown: InputDown is InputAction.WasPressedThisFrame (one frame
+            // per press, confirmed in InputManager.KeyDown), so up/down and the sprint boost used
+            // to fire for a single frame and Fly could barely climb or descend on its own.
+            if (!typing && SemiFunc.InputHold(InputKey.Jump)) dir += Vector3.up;
+            if (!typing && SemiFunc.InputHold(InputKey.Crouch)) dir += Vector3.down;
             if (dir.sqrMagnitude > 1f) dir.Normalize();
 
             float speed = CheatState.FlySpeed.Value;
-            if (CheatState.FlySprintBoost.Value && SemiFunc.InputDown(InputKey.Sprint))
+            if (!typing && CheatState.FlySprintBoost.Value && SemiFunc.InputHold(InputKey.Sprint))
                 speed *= 2f;
 
             if (dir.sqrMagnitude > 0.0001f)
                 controller.transform.position += dir * speed * Time.deltaTime;
 
             _wasFlying = true;
-        }
-        else if (noclip)
-        {
-            // Kinematic bodies ignore Physics.gravity, so falling is integrated by hand here.
-            _noclipFallSpeed += Physics.gravity.y * Time.deltaTime;
-            controller.transform.position += Vector3.up * (_noclipFallSpeed * Time.deltaTime);
         }
         else if (_wasFlying)
         {

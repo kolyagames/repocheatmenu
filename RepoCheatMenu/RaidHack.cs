@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
@@ -112,7 +120,7 @@ internal static class RaidHack
         // previous one has finished - stacking into a solid glowing blob that blocked the whole
         // screen (reported in play) instead of the brief, isolated flash a real impact gives.
         if ((body.transform.position - _cagePoint).sqrMagnitude > 0.25f)
-            body.Teleport(_cagePoint, target.transform.rotation);
+            GameReflect.TeleportSafe(body, _cagePoint, target.transform.rotation, "RaidHack");
     }
 
     public static void Yeet()
@@ -149,7 +157,7 @@ internal static class RaidHack
         {
             Vector2 dir2 = Random.insideUnitCircle.normalized;
             Vector3 pos = _pendingYeet.transform.position + new Vector3(dir2.x, 0f, dir2.y) * 80f + Vector3.up * 40f;
-            body.Teleport(pos, _pendingYeet.transform.rotation);
+            GameReflect.TeleportSafe(body, pos, _pendingYeet.transform.rotation, "RaidHack");
         }
         _pendingYeet = null;
     }
@@ -216,7 +224,7 @@ internal static class RaidHack
 
             // Same fix as ApplyCage above - only re-teleport on actual drift, not every tick.
             if ((body.transform.position - point).sqrMagnitude > 0.25f)
-                body.Teleport(point, target.transform.rotation);
+                GameReflect.TeleportSafe(body, point, target.transform.rotation, "RaidHack");
         }
     }
 
@@ -264,7 +272,7 @@ internal static class RaidHack
             {
                 Vector2 dir2 = Random.insideUnitCircle.normalized;
                 Vector3 pos = target.transform.position + new Vector3(dir2.x, 0f, dir2.y) * 80f + Vector3.up * 40f;
-                body.Teleport(pos, target.transform.rotation);
+                GameReflect.TeleportSafe(body, pos, target.transform.rotation, "RaidHack");
             }
             _pendingYeetAll.RemoveAt(i);
         }
@@ -339,7 +347,7 @@ internal static class RaidHack
             }
 
             PhysGrabObject body = GetBody(target);
-            body?.Teleport(point, target.transform.rotation);
+            if (body != null) GameReflect.TeleportSafe(body, point, target.transform.rotation, "RaidHack");
         }
 
         // Unconditional, not "only when the table is bigger than the live list": those two counts
@@ -391,7 +399,7 @@ internal static class RaidHack
 
             Vector2 dir2 = Random.insideUnitCircle.normalized;
             Vector3 pos = p.transform.position + new Vector3(dir2.x, 0f, dir2.y) * 5f;
-            held.Teleport(pos, held.transform.rotation);
+            GameReflect.TeleportSafe(held, pos, held.transform.rotation, "RaidHack");
             count++;
         }
 

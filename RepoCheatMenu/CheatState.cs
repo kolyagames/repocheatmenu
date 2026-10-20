@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using System.Reflection;
 using BepInEx.Configuration;
@@ -44,6 +52,7 @@ internal static class CheatState
     public static ConfigEntry<float> FlySpeed;
     public static ConfigEntry<bool> Noclip;
     public static ConfigEntry<bool> FlySprintBoost;
+    public static ConfigEntry<bool> FlyAutoHide;
     public static ConfigEntry<bool> DeadFly;
     public static ConfigEntry<float> DeadFlySpeed;
 
@@ -53,9 +62,14 @@ internal static class CheatState
     public static ConfigEntry<bool> EyeColor;
     public static ConfigEntry<string> EyeColorName;
     public static ConfigEntry<bool> BigPupils;
+    public static ConfigEntry<bool> EyeOverride;
+    public static ConfigEntry<string> EyeOverrideState;
+    public static ConfigEntry<bool> ExpressionLock;
+    public static ConfigEntry<int> ExpressionIndex;
     public static ConfigEntry<string> NameChangerText;
     public static ConfigEntry<bool> MimicHostName;
     public static ConfigEntry<bool> MimicHostSkin;
+    public static ConfigEntry<bool> MimicFollowPicked;
 
     // Entities tab
     public static ConfigEntry<bool> NoGrabMaxTime;
@@ -128,6 +142,10 @@ internal static class CheatState
     public static ConfigEntry<bool> PillarDropRemoveLimit;
     public static ConfigEntry<float> SpawnRateMultiplier;
     public static ConfigEntry<bool> HealSpam;
+    public static ConfigEntry<bool> PlayerCatcher;
+    public static ConfigEntry<float> PlayerCatcherRange;
+    public static ConfigEntry<float> PlayerCatcherHoldSeconds;
+    public static ConfigEntry<bool> PlayerCatcherTargetOnly;
     public static ConfigEntry<bool> CartRam;
     public static ConfigEntry<bool> MasterRpcSelfBypass;
     public static ConfigEntry<bool> InfiniteChargingStation;
@@ -146,10 +164,12 @@ internal static class CheatState
 
     // Voice tab
     public static ConfigEntry<string> VoiceFilter;
+    public static ConfigEntry<bool> DemonVoice;
     public static ConfigEntry<bool> GlitchyVoice;
     public static ConfigEntry<float> GlitchyVoiceInterval;
     public static ConfigEntry<bool> ChipmunkVoices;
     public static ConfigEntry<float> ChipmunkPitch;
+    public static ConfigEntry<bool> GhostHearAll;
 
     // Repo Debug tab
     public static ConfigEntry<bool> AlwaysInteract;
@@ -179,14 +199,91 @@ internal static class CheatState
     public static ConfigEntry<float> FlipOrbitRadius;
     public static ConfigEntry<bool> TPose;
     public static ConfigEntry<bool> GhostCrawl;
+    public static ConfigEntry<bool> PhantomSprint;
+    public static ConfigEntry<bool> AllEyesOnMe;
+    public static ConfigEntry<bool> AnimSpeedSpoof;
+    public static ConfigEntry<bool> HonkStorm;
+    public static ConfigEntry<bool> MenuBlur;
+    public static ConfigEntry<string> EspStyle;
+    public static ConfigEntry<bool> EspTraps;
+    public static ConfigEntry<bool> EspArrows;
+    public static ConfigEntry<bool> JumpCircles;
+    public static ConfigEntry<bool> EspBoxes;
+    public static ConfigEntry<bool> FriendMarkers;
+    public static ConfigEntry<string> EspBoxMode;
+    public static ConfigEntry<int> JumpCircleRadius;
+    public static ConfigEntry<bool> EspArrowsOnScreen;
+    public static ConfigEntry<bool> FxUseTheme;
+    public static ConfigEntry<string> FxColor;
+    public static ConfigEntry<bool> KillFx;
+    public static ConfigEntry<string> KillFxMode;
+    public static ConfigEntry<string> KillFxPhysics;
+    public static ConfigEntry<bool> KillFxPlayers;
+    public static ConfigEntry<bool> TargetFx;
+    public static ConfigEntry<string> TargetFxMode;
+    public static ConfigEntry<bool> TargetFxEnemies;
+    public static ConfigEntry<bool> CustomFog;
+    public static ConfigEntry<float> CustomFogStart;
+    public static ConfigEntry<float> CustomFogEnd;
+    public static ConfigEntry<float> CustomFogTint;
+    public static ConfigEntry<string> NotifyStyle;
+    public static ConfigEntry<string> MenuStyle;
+    public static ConfigEntry<bool> LobbyAlerts;
+    public static ConfigEntry<bool> EnemyAlert;
+    public static ConfigEntry<float> EnemyAlertRange;
+    public static ConfigEntry<bool> HaulAlert;
+    public static ConfigEntry<bool> LowHealthAlert;
+    public static ConfigEntry<bool> DeathRecap;
+    public static ConfigEntry<bool> DamageAlert;
+    public static ConfigEntry<int> LowHealthPercent;
+    public static ConfigEntry<bool> StableCamera;
+    public static ConfigEntry<bool> Zoom;
+    public static ConfigEntry<bool> PhotoMode;
+    public static ConfigEntry<bool> StreamerMode;
+    public static ConfigEntry<float> ZoomFov;
+    public static ConfigEntry<float> HonkStormInterval;
+    public static ConfigEntry<bool> PhantomJump;
+    public static ConfigEntry<bool> FakeHurt;
+    public static ConfigEntry<float> FakeMotionInterval;
+    public static ConfigEntry<float> AnimSpeedValue;
     public static ConfigEntry<bool> Invisible;
     public static ConfigEntry<float> InvisibleHeight;
     public static ConfigEntry<bool> InvisibleRevealWhileTalking;
+    public static ConfigEntry<bool> InvisibleSpeak;
+    public static ConfigEntry<bool> InvisibleBlockGrab;
+    public static ConfigEntry<bool> InvisibleOverCeiling;
+    public static ConfigEntry<float> InvisibleOverCeilingHeight;
     public static ConfigEntry<bool> GlitchyFlashlight;
     public static ConfigEntry<float> GlitchyFlashlightRadius;
+    public static ConfigEntry<bool> FakePing;
+    public static ConfigEntry<int> FakePingValue;
+    public static ConfigEntry<string> FakePingText;
+    public static ConfigEntry<bool> FakeOvercharge;
+    public static ConfigEntry<int> FakeOverchargeValue;
+    public static ConfigEntry<bool> DiscoBeam;
+    public static ConfigEntry<int> DiscoBeamMode;
+    public static ConfigEntry<float> DiscoBeamSpeed;
+    public static ConfigEntry<bool> GhostObserver;
+    public static ConfigEntry<bool> GhostObserverHear;
+    public static ConfigEntry<bool> GhostFollow;
+    public static ConfigEntry<float> GhostFollowDistance;
+    public static ConfigEntry<bool> GhostFollowEyes;
+    public static ConfigEntry<bool> GhostSpeak;
+    public static ConfigEntry<bool> GhostTelekinesis;
+    public static ConfigEntry<float> GhostTelekinesisDistance;
+    public static ConfigEntry<bool> HiddenPlayerAlert;
+    public static ConfigEntry<bool> TeammatesOnMap;
     public static ConfigEntry<bool> GhostRider;
     public static ConfigEntry<bool> ChatSpam;
     public static ConfigEntry<string> ChatSpamText;
+    public static ConfigEntry<bool> Pings;
+    public static ConfigEntry<bool> ChatToIsland;
+    public static ConfigEntry<bool> MuteOthersTts;
+    public static ConfigEntry<float> PingSeconds;
+    public static ConfigEntry<string> QuickPhrase1;
+    public static ConfigEntry<string> QuickPhrase2;
+    public static ConfigEntry<string> QuickPhrase3;
+    public static ConfigEntry<string> QuickPhrase4;
     public static ConfigEntry<float> ChatSpamInterval;
     public static ConfigEntry<bool> ChatSpamRichText;
     public static ConfigEntry<string> ChatSpamColor;
@@ -209,10 +306,18 @@ internal static class CheatState
     public static ConfigEntry<bool> HudMediaPlayerUseSpotify;
     public static ConfigEntry<bool> HudAutoStack;
     public static ConfigEntry<string> HudMediaPlayerTitle;
+    public static ConfigEntry<bool> HudLyrics;
+    public static ConfigEntry<bool> HudLyricsInGame;
+    public static ConfigEntry<bool> HudLyricsOnline;
+    public static ConfigEntry<float> HudLyricsOffset;
     public static HudWidgetConfig HudPlayerStats;
     public static HudWidgetConfig HudTargetInfo;
     public static HudWidgetConfig HudMediaPlayer;
     public static HudWidgetConfig HudKeybinds;
+    public static HudWidgetConfig HudTeam;
+    public static HudWidgetConfig HudEnemies;
+    public static HudWidgetConfig HudLoot;
+    public static HudWidgetConfig HudRun;
 
     public static ConfigEntry<string> FakeSoundTargetName;
     public static ConfigEntry<bool> PlayerCage;
@@ -238,6 +343,7 @@ internal static class CheatState
     public static ConfigEntry<bool> ArenaLegitSabotage;
     public static ConfigEntry<bool> SwarmStorm;
     public static ConfigEntry<bool> LockAllDoors;
+    public static ConfigEntry<bool> BlackHole;
     public static ConfigEntry<bool> TrapRoom;
     public static ConfigEntry<bool> EnemyDropKill;
     public static ConfigEntry<bool> FreezeEnemies;
@@ -259,8 +365,39 @@ internal static class CheatState
     public static ConfigEntry<int> AntiCrashMaxInstantiatesPerSecond;
     public static ConfigEntry<int> AntiCrashMaxArgStringLength;
     public static ConfigEntry<int> AntiCrashQuarantineSeconds;
+    public static ConfigEntry<bool> IgnoreDeath;
+    public static ConfigEntry<bool> IgnoreHurt;
+    public static ConfigEntry<bool> IgnoreImpulse;
+    public static ConfigEntry<bool> IgnoreTumble;
+    public static ConfigEntry<bool> IgnoreHealthSet;
     public static ConfigEntry<int> MultiRoomExtraCount;
     public static ConfigEntry<int> MultiRoomMaxPlayers;
+    public static ConfigEntry<bool> Optimization;
+    public static ConfigEntry<bool> OptShadows;
+    public static ConfigEntry<bool> OptAntiAliasing;
+    public static ConfigEntry<bool> OptPixelLights;
+    public static ConfigEntry<bool> OptLodBias;
+    public static ConfigEntry<bool> OptSoftParticles;
+    public static ConfigEntry<bool> OptReflectionProbes;
+    public static ConfigEntry<bool> OptPostProcessing;
+    public static ConfigEntry<bool> OptFog;
+    public static ConfigEntry<bool> BackgroundFpsLimit;
+    public static ConfigEntry<int> BackgroundFps;
+    public static ConfigEntry<bool> MuteInBackground;
+    public static ConfigEntry<bool> HudIsland;
+    public static ConfigEntry<bool> MainScreen;
+    public static ConfigEntry<bool> MainScreenStartOpen;
+    public static ConfigEntry<float> HudIslandScale;
+    public static ConfigEntry<float> HudScale;
+    public static ConfigEntry<bool> HudIslandNotifications;
+    public static ConfigEntry<bool> HudIslandExtraction;
+    public static ConfigEntry<bool> HudIslandMusic;
+    public static ConfigEntry<bool> HudIslandLyrics;
+    public static ConfigEntry<bool> HudIslandSides;
+    public static ConfigEntry<bool> HudIslandBlur;
+    public static ConfigEntry<bool> HudIslandTarget;
+    public static ConfigEntry<string> HudIslandText;
+    public static ConfigEntry<string> GpsMode;
 
     public static void Init(ConfigFile config)
     {
@@ -376,13 +513,17 @@ internal static class CheatState
         FlySpeed = config.Bind("Speed", "FlySpeed", 15f,
             "Fly movement speed in units/sec.");
         Noclip = config.Bind("Speed", "Noclip", false,
-            "Goes kinematic and lets you sink straight through the floor (gravity simulated by " +
-            "hand, since a kinematic Rigidbody ignores real Physics.gravity) - useful on its own " +
-            "as a quick way to fall through geometry without flying around. Fly already passes " +
-            "through walls by itself now, so Noclip isn't required to combine with it anymore. " +
-            "Purely local, works for guest or host.");
+            "Free movement through walls and floors: gravity off, Rigidbody kinematic, Collider " +
+            "disabled, you glide along the camera's look direction (WASD, hold Jump = up, hold " +
+            "Crouch = down). Uses the same Fly Speed / Sprint Boost values as Fly. Purely local, " +
+            "works for guest or host.");
         FlySprintBoost = config.Bind("Speed", "FlySprintBoost", false,
             "Doubles Fly speed while holding Sprint, on top of the normal Fly Speed value.");
+        FlyAutoHide = config.Bind("Speed", "FlyAutoHide", true,
+            "While Fly or Noclip is on, hide your character from other players the same way Invisible does " +
+            "(your broadcast position is swapped for the Invisible Height), even if Invisible itself is off. " +
+            "Without it everyone sees you flying through the air and walls. Your voice sounds distant for " +
+            "other players while hidden, same trade-off as Invisible.");
         DeadFly = config.Bind("Speed", "DeadFly", false,
             "Free movement while dead, before being revived. The vanilla spectate camera only " +
             "orbits a fixed point (SpectateCamera.StateDeath, confirmed in the decompiled source - " +
@@ -427,6 +568,38 @@ internal static class CheatState
             "custom-properties broadcast (Player.SetCustomProperties, real Photon SDK channel, not " +
             "R.E.P.O.-specific) to show up for OTHER players running this mod too, not just locally.");
 
+        EyeOverride = config.Bind("Cosmetic", "EyeOverride", false,
+            "The game's own eye-effect system, called the same way ChatManager/GumballValuable/" +
+            "EnemyCeilingEye already call it - PlayerHealth.EyeMaterialOverride(state, time, " +
+            "priority), a PUBLIC method, no RPC by name and no bypass anywhere. The important " +
+            "difference from Eye Color above: that one pushes a fixed palette through our own " +
+            "custom-properties channel, so only players who ALSO run this mod see it, while this " +
+            "is a stock effect on the game's own sync path (PlayerHealth.Update broadcasts it " +
+            "itself) - so EVERY player in the room sees it, mod or not. Re-armed on a short timer " +
+            "because the underlying call is a countdown, not a latch; switching it off just lets " +
+            "that countdown lapse, which makes the game broadcast the deactivation and reset its " +
+            "own priority field, so nothing lingers. Works for guest or host.");
+        EyeOverrideState = config.Bind("Cosmetic", "EyeOverrideState", "Red",
+            "Which of the game's five built-in eye looks to hold: Red, Green, Love (heart eyes), " +
+            "CeilingEye (what the ceiling-eye monster does to you) or Inverted (the gumball " +
+            "effect). Cycle with the menu's button.");
+
+        ExpressionLock = config.Bind("Cosmetic", "ExpressionLock", false,
+            "The game already lets you show a facial expression by HOLDING one of six keybinds " +
+            "(InputKey.Expression1-6, confirmed in the decompiled PlayerExpression.cs) - this just " +
+            "triggers the same real API (PlayerAvatar.PlayerExpressionSetRPC/StopRPC, [PunRPC], " +
+            "gated by SemiFunc.OwnerOnlyRPC which you always pass on your own avatar - a completely " +
+            "legitimate call, same category as Name Changer, no RPC hole involved) so it can be " +
+            "locked ON from the menu instead of needing to physically hold a key down. Confirmed in " +
+            "the same file's receive-side Update(): the synced value is a plain dictionary read " +
+            "every frame by every OTHER client's own component, refreshing their own local decay " +
+            "timer by itself - one Set call is enough to hold it, no need to keep resending. Works " +
+            "for guest or host.");
+        ExpressionIndex = config.Bind("Cosmetic", "ExpressionIndex", 1,
+            "Which of the game's 6 built-in expression slots to lock (same 6 the game itself maps " +
+            "to InputKey.Expression1-6) - cycle with +/- to see which one looks best, the actual " +
+            "face pose per slot is set by the avatar's own cosmetic data, not named in code.");
+
         NameChangerText = config.Bind("Cosmetic", "NameChangerText", "",
             "New display name to broadcast - rides PlayerAvatar.AddToStatsManagerRPC " +
             "(confirmed [PunRPC], gated by SemiFunc.OwnerOnlyRPC which you always pass on your " +
@@ -446,6 +619,11 @@ internal static class CheatState
             "concept). Works for guest or host - only reads the host's own already-public name, no " +
             "authority needed.");
 
+        MimicFollowPicked = config.Bind("Cosmetic", "MimicFollowPicked", false,
+            "Makes the two auto-mimic toggles above copy the player picked in \"Игроки\" instead of " +
+            "the host. They keep following that player: if they rename or change their look, you do too. " +
+            "With nobody picked (or yourself picked) nothing is copied. The one-shot button copies " +
+            "name and skin once, regardless of this setting.");
         MimicHostSkin = config.Bind("Cosmetic", "MimicHostSkin", false,
             "Same auto-mimic idea as MimicHostName, on appearance instead of the name - finds the " +
             "host's PlayerAvatar (PlayerTargets.Host()) and copies their playerCosmetics." +
@@ -492,8 +670,8 @@ internal static class CheatState
             "Item type to spawn for free - pick from the game's full item registry " +
             "(StatsManager.itemDictionary, loaded locally off disk so it's the same list " +
             "regardless of host/guest status - NOT the shop's current rotation, which is " +
-            "master-gated and empty for a guest) using the cycle button, then hit Spawn. Same " +
-            "PhotonNetwork.InstantiateRoomObject trick as Gold Coins - works for guest or host.");
+            "master-gated and empty for a guest) using the cycle button, then hit Spawn. Goes " +
+            "through NetSpawn (room object for the host, plain Instantiate for a guest).");
         EspMaxDistance = config.Bind("Esp", "EspMaxDistance", 25,
             "Maximum distance (meters) to show ESP labels at - keeps distant clutter off screen.");
         EspShaderMode = config.Bind("Esp", "EspShaderMode", false,
@@ -676,6 +854,19 @@ internal static class CheatState
             "photonView.IsMine, not the sender) - harmless, but retriggers the game's own heal " +
             "camera-glitch effect over and over. No effect once they're already at full health.");
 
+        PlayerCatcher = config.Bind("Troll", "PlayerCatcher", false,
+            "Auto-grabs the nearest player who is tumbling (the Q ragdoll mode) within range. A tumbling " +
+            "body is a normal PhysGrabObject the game already lets teammates pick up and carry, so this " +
+            "just calls PhysGrabber.OverrideGrab on it - no RPC is forged, works for guest or host, and " +
+            "the game's own ForceGrabPhysObject does not need line of sight. Never takes over a grab " +
+            "that holds something other than a player.");
+        PlayerCatcherRange = config.Bind("Troll", "PlayerCatcherRange", 12f,
+            "How far (meters) a tumbling player can be and still get caught.");
+        PlayerCatcherHoldSeconds = config.Bind("Troll", "PlayerCatcherHoldSeconds", 5f,
+            "Let go of the caught player after this many seconds (0 = hold until you release yourself).");
+        PlayerCatcherTargetOnly = config.Bind("Troll", "PlayerCatcherTargetOnly", false,
+            "Catch only the player picked as the target in the Players tab.");
+
         CartRam = config.Bind("Troll", "CartRam", false,
             "Grabs the nearest cart (PhysGrabber.OverrideGrab, same auto-equip path drones use) " +
             "and repeatedly snaps it onto the picked target's position (PhysGrabObject.Teleport - " +
@@ -709,13 +900,14 @@ internal static class CheatState
             "PlayerDeathHead.triggeredPosition) - works for guest or host.");
 
         DeathAutoToExtraction = config.Bind("Valuables", "DeathAutoToExtraction", false,
-            "Same as Death Auto To Truck, but targets the nearest extraction point instead. Only " +
-            "one of these two should be on at a time - whichever runs its Trigger patch last wins.");
+            "Same as Death Auto To Truck, but targets the active (else nearest) extraction point. If " +
+            "both are on, the truck wins. Host: rewrites the head's spawn point; guest: " +
+            "DeathRelocateHack teleports the head (SetPositionRPC) right after the host places it.");
 
         TeammateDeathDropBead = config.Bind("Valuables", "TeammateDeathDropBead", false,
             "Whenever ANY player's death head triggers (including yours), spawns a small valuable " +
-            "shard at their position via PhotonNetwork.InstantiateRoomObject - same guest-safe " +
-            "spawn path as Spawn Valuable. Works for guest or host.");
+            "shard at their position via NetSpawn (room object for the host, plain Instantiate for " +
+            "a guest - InstantiateRoomObject returns null for a guest). Works for guest or host.");
 
         AutoReviveTeammates = config.Bind("Valuables", "AutoReviveTeammates", false,
             "Every couple seconds, calls Revive() on every dead teammate currently in the level. " +
@@ -757,6 +949,18 @@ internal static class CheatState
             "Listen-only - what you transmit yourself is never affected, and nobody else's " +
             "hearing changes either.");
 
+        DemonVoice = config.Bind("Voice", "DemonVoice", false,
+            "The only voice trick here that other people actually HEAR (Chipmunk Voices above only " +
+            "re-pitches THEM in YOUR ears). Rides ItemGunTranq.MakeHitPlayersHigh(), a public method " +
+            "of the tranq gun that fires its own hit effect at PlayerAvatar.instance - dilated " +
+            "pupils plus an RPC to everyone else that runs OverridePitch(0.65x, 3s, with a slow " +
+            "wobble) on their copy of your voice. Receive-side guard checks the owner of the avatar " +
+            "named in the payload, which is always us, so it passes honestly - guest or host, no " +
+            "bypass. NEEDS an ItemGunTranq to exist somewhere in the level (the RPC is declared on " +
+            "that component) - nobody has to hold or fire it, but if the level has none, spawn one " +
+            "from the World tab. Re-sent every 2.5s because the pitch override is a 3-second " +
+            "countdown on their end, not a latch.");
+
         GlitchyVoice = config.Bind("Voice", "GlitchyVoice", false,
             "Troll: chops your OWN outgoing voice transmission on and off on a fast timer " +
             "(Photon Voice Recorder.TransmitEnabled, re-forced in a Postfix after " +
@@ -782,6 +986,18 @@ internal static class CheatState
         ChipmunkPitch = config.Bind("Voice", "ChipmunkPitch", 1.6f,
             "Pitch multiplier ChipmunkVoices applies - above 1 is higher/faster (chipmunk), below " +
             "1 is lower/slower (demon voice). 1 = no change.");
+
+        GhostHearAll = config.Bind("Voice", "GhostHearAll", false,
+            "While YOU are dead (ghost/spectator): hear every living player clearly, no matter " +
+            "where their body is, and see their mouth animation play. The game places remote " +
+            "PlayerVoiceChat AudioSources with spatialBlend=1 (full 3D) and 3D rolloff - as a " +
+            "ghost, your audio listener rides SpectateCamera which can be far from most of them, " +
+            "so they go quiet or inaudible. The talk animation reads clipLoudness from that same " +
+            "AudioSource (confirmed in the decompiled PlayerAvatarTalkAnimation.cs), so when the " +
+            "audio is silent locally, their mouth stays shut on your screen too. Postfix on " +
+            "PlayerVoiceChat.Update forces spatialBlend=0 and unmutes remote voices (your own " +
+            "voice chat is left alone) only while you are dead (isDisabled) or an active ghost " +
+            "observer, so nothing changes in normal play. Purely local playback, nothing broadcast.");
 
         // These three are the only built-in debug fields confirmed guest-safe by reading
         // their call sites in the decompiled source - no IsMasterClient/IsMasterClientOrSingleplayer
@@ -980,6 +1196,161 @@ internal static class CheatState
             "untouched locally. Works for guest or host. Don't run alongside T-Pose - both mutate " +
             "the same broadcast flags, whichever Prefix runs last wins.");
 
+        PhantomSprint = config.Bind("Troll", "PhantomSprint", false,
+            "T-Pose's mirror image, same trick inverted: forces isMoving+isSprinting TRUE and a fake " +
+            "forward rbVelocity (instead of everything false) on the exact same broadcast fields " +
+            "PlayerAvatarVisuals.AnimationLogic already reads to drive the 'Moving'/'Sprinting' " +
+            "animator bools and the leg-cycle speed blend (confirmed in the decompiled source, same " +
+            "gate as T-Pose's own fields). To everyone else you look like you're sprinting flat out " +
+            "in place while standing still, or sprinting in your real movement direction while " +
+            "actually just walking - your own real animation/movement/collision is completely " +
+            "untouched, only what other clients render changes. Works for guest or host. Don't run " +
+            "alongside T-Pose or GhostCrawl - all three fight over the same broadcast flags.");
+
+        AllEyesOnMe = config.Bind("Troll", "AllEyesOnMe", false,
+            "Broadcasts \"I am talking right now\" continuously without you saying a word - " +
+            "PlayerVoiceChat.IsTalkingRPC ([PunRPC], SemiFunc.OwnerOnlyRPC, your own voice chat, so " +
+            "a legitimate call with no bypass). Confirmed by grepping every consumer of that flag in " +
+            "the decompiled source, all three are visual and none touch audio: PlayerEyes makes every " +
+            "avatar within 6m lock its EYES onto whoever is talking (so everyone nearby keeps staring " +
+            "at you), and the lobby player list plus the lobby menu head both show their own " +
+            "talking indicator for you. Nobody hears anything - the mic/stream half of that class is " +
+            "entirely behind photonView.IsMine. Re-sent twice a second because the game's own sender " +
+            "is edge-triggered and broadcasts a real false the moment your actual mic closes; it " +
+            "goes to RpcTarget.Others exactly like the game's own does, so your LOCAL isTalking " +
+            "stays honest and Invisible's talk-reveal logic is unaffected. Works for guest or host.");
+
+        AnimSpeedSpoof = config.Bind("Troll", "AnimSpeedSpoof", false,
+            "Not a broadcast-field spoof this time - a real game API called legitimately, like Name " +
+            "Changer and Expression Lock. PlayerAvatar.OverrideAnimationSpeedActivateRPC ([PunRPC], " +
+            "gated by SemiFunc.OwnerOnlyRPC which you always pass on your own avatar) sets the " +
+            "playback rate of your avatar's Animator on every other client. The game itself only " +
+            "ever uses this in one place (ValuableWizardTimeGlass slows the holder to 0.2x) - here " +
+            "you pick any rate and hold it indefinitely. Confirmed in PlayerAvatar." +
+            "OverrideAnimationSpeedLogic(): every OTHER client re-arms the effect's own timer each " +
+            "frame while the active flag is set (the '!isLocal && overrideAnimationSpeedActive' " +
+            "branch), so one call holds it - it doesn't need resending per tick, only on change. " +
+            "Feeds animator.speed and PlayerAvatarVisuals' own spring math, nothing else - no " +
+            "position/Rigidbody/collision involved, and your real movement speed is completely " +
+            "unchanged, only how fast the animation of it plays for everyone else. Works for guest " +
+            "or host.");
+        AnimSpeedValue = config.Bind("Troll", "AnimSpeedValue", 3f,
+            "Animation playback rate broadcast while Anim Speed Spoof is on. 0.2 is the game's own " +
+            "time-glass slow motion (creepy); 1 is normal; 3+ is comically frantic. Note above ~3 " +
+            "the visuals component's spring math (its own deltaTime is multiplied by this same " +
+            "value) starts overshooting and the avatar visibly jitters - that's the remote render " +
+            "of your model misbehaving on their machine, not a physics or position problem, and " +
+            "arguably the point at that setting.");
+
+        StableCamera = config.Bind("Visual", "StableCamera", false,
+            "Pins GameplayManager.cameraShake / cameraNoise / cameraAnimation to 0 (the game's own " +
+            "accessibility multipliers): no explosion/hit shake, no head bob, no sprint FOV kick. " +
+            "Local only. Turning it off hands the values back to the game's settings.");
+        StreamerMode = config.Bind("Visual", "StreamerMode", false,
+            "Hides other players' nicknames in everything the mod draws over the game (HUD cards, island, ESP " +
+            "labels, pings, death notices, run journal): they become 'Игрок 1', 'Игрок 2'..., you become 'Вы'. " +
+            "The menus' player pickers still show real names - keep the menu closed on stream.");
+        PhotoMode = config.Bind("Visual", "PhotoMode", false,
+            "Hides every interface on screen - the game's HUD and all of the mod's (HUD, island, ESP labels, " +
+            "radar) - while on, except while one of the mod's menus is open. Bind it to a key. Local only.");
+        Zoom = config.Bind("Visual", "Zoom", false,
+            "Narrows the camera FOV to ZoomFov with a smooth blend while on. Local only; bind the " +
+            "toggle to a key (middle-click the row in the old menu) for a quick scope.");
+        ZoomFov = config.Bind("Visual", "ZoomFov", 25f,
+            "Target field of view while Zoom is on (vanilla is about 60-70).");
+        LobbyAlerts = config.Bind("Visual", "LobbyAlerts", false,
+            "Island notification when a teammate joins, leaves, dies or is revived. Local only; needs " +
+            "the Dynamic Island on.");
+        EnemyAlert = config.Bind("Visual", "EnemyAlert", false,
+            "Island notification when a spawned enemy comes within EnemyAlertRange metres of you " +
+            "(once per approach). Local only.");
+        EnemyAlertRange = config.Bind("Visual", "EnemyAlertRange", 15f,
+            "Distance in metres for the enemy alert (minimum 3).");
+        HaulAlert = config.Bind("Visual", "HaulAlert", false,
+            "Island notification the moment the extraction haul reaches the quota. Local only.");
+        DamageAlert = config.Bind("Visual", "DamageAlert", true,
+            "Island notification '-$X' when the valuable you are holding loses value from a hit (hits within " +
+            "half a second are summed). Local only.");
+        DeathRecap = config.Bind("Visual", "DeathRecap", true,
+            "Island notification on every player's death saying what killed them (the enemy's name, or " +
+            "'not an enemy' for falls/traps/items). Also recorded in the run journal. Local only.");
+        LowHealthAlert = config.Bind("Visual", "LowHealthAlert", false,
+            "Island notification when your own health, or a teammate's, drops to LowHealthPercent or below " +
+            "(once per drop; re-armed after the health recovers 20 points above it). Local only, reads the " +
+            "health the game already replicates.");
+        LowHealthPercent = config.Bind("Visual", "LowHealthPercent", 30,
+            new ConfigDescription("Health percentage for the low-health alert.", new AcceptableValueRange<int>(5, 90)));
+        MenuStyle = config.Bind("Hud", "MenuStyle", MenuRouter.OldMode,
+            "What the RightShift menu is: 'Старый' = its old mode (the original menu), 'Новый' = its new mode " +
+            "(the Rockstar-style window, the same one F6 opens). Changed from the HUD tab of either menu.");
+        MenuStyle.SettingChanged += (_, _) => MenuRouter.OnStyleChanged();
+        FxUseTheme = config.Bind("Visual", "FxUseTheme", true,
+            "Rockstar-style world effects (kill particles, target marker, fog tint) use the accent colour of the menu " +
+            "theme; turn off to use FxColor instead.");
+        FxColor = config.Bind("Visual", "FxColor", "#9F6BFF", "Hex colour of the world effects when FxUseTheme is off.");
+        KillFx = config.Bind("Visual", "KillFx", false,
+            "Port of Rockstar's Kill Effects: when an enemy dies, a burst of glow particles shaped like its body (or a " +
+            "lightning column). Local only, drawn on the overlay.");
+        KillFxMode = config.Bind("Visual", "KillFxMode", "Частицы", "Частицы or Молния.");
+        KillFxPhysics = config.Bind("Visual", "KillFxPhysics", "Разлёт", "Разлёт (slow drift) or Гравитация (fall and bounce).");
+        KillFxPlayers = config.Bind("Visual", "KillFxPlayers", false, "Also play the kill effect when a player dies.");
+        TargetFx = config.Bind("Visual", "TargetFx", false,
+            "Port of Rockstar's Target ESP: a glowing marker around the player picked in the Players tab. Local only.");
+        TargetFxMode = config.Bind("Visual", "TargetFxMode", "Кристаллы", "Души, Кристаллы, Круг or Желе.");
+        TargetFxEnemies = config.Bind("Visual", "TargetFxEnemies", false, "With no player picked, mark the nearest enemy (within 30 m).");
+        CustomFog = config.Bind("Visual", "CustomFog", false,
+            "Port of Rockstar's Custom Fog: linear fog between CustomFogStart and CustomFogEnd metres, tinted with the effect " +
+            "colour. The level's own fog is saved and restored when this is switched off.");
+        CustomFogStart = config.Bind("Visual", "CustomFogStart", 1f, "Where the fog starts, metres.");
+        CustomFogEnd = config.Bind("Visual", "CustomFogEnd", 40f, "Where the fog is fully opaque, metres.");
+        CustomFogTint = config.Bind("Visual", "CustomFogTint", 46f, "How strongly the fog is tinted with the effect colour, percent.");
+        NotifyStyle = config.Bind("Visual", "NotifyStyle", "Плашки",
+            "Where feature/alert notifications appear: Плашки (Rockstar's pills at the bottom centre) or Остров (the Dynamic Island).");
+        EspTraps = config.Bind("Visual", "EspTraps", false,
+            "Port of Rockstar's Trap ESP: a tag on every trap of the level (ready / already triggered). Needs EspStyle = " +
+            "Rockstar.");
+        EspArrows = config.Bind("Visual", "EspArrows", false,
+            "Port of Rockstar's Arrow ESP: an arrow on a ring around the screen centre for every player / enemy that is out of " +
+            "view, pointing the way to turn. Follows the EspPlayers / EspEnemies switches.");
+        EspArrowsOnScreen = config.Bind("Visual", "EspArrowsOnScreen", false,
+            "Also draw the arrow for targets that are already on screen (Rockstar's 'hide on screen' turned off).");
+        JumpCircles = config.Bind("Visual", "JumpCircles", false,
+            "Port of Rockstar's Jump Circles: a ring on the floor where a player (you included) pushes off into a jump. " +
+            "Coloured with the effects colour (FxUseTheme / FxColor).");
+        JumpCircleRadius = config.Bind("Visual", "JumpCircleRadius", 150,
+            new ConfigDescription("Final radius of a jump ring, centimetres.", new AcceptableValueRange<int>(50, 250)));
+        EspBoxes = config.Bind("Visual", "EspBoxes", false,
+            "Port of Rockstar's Box ESP: a 3D box (edges and a translucent fill) around players, enemies and valuables, " +
+            "through walls. Follows the EspPlayers / EspEnemies / EspValuables switches and EspMaxDistance.");
+        EspBoxMode = config.Bind("Visual", "EspBoxMode", "Контур + заливка", "Контур + заливка, Контур or Заливка.");
+        FriendMarkers = config.Bind("Visual", "FriendMarkers", false,
+            "Port of Rockstar's Friend Marker: a green spinning diamond over every other living player's head, through walls.");
+        EspStyle = config.Bind("Visual", "EspStyle", "Rockstar",
+            "How the ESP labels are drawn: Rockstar (name tags like Rockstar's Nametag ESP: pill with a colour chip, name and " +
+            "[health]; black-box tags for enemies, valuables, carts, extraction) or Классика (the old text labels). The " +
+            "Shader Mode silhouettes are the same in both.");
+        MenuBlur = config.Bind("Hud", "MenuBlur", true,
+            "Frosted-glass blur of the game frame behind the F6 menu window (Rockstar's ClickGUI look). " +
+            "Falls back to a plain panel where there is no game frame to blur (main menu).");
+        HonkStorm = config.Bind("Raid", "HonkStorm", false,
+            "ItemVehicle.HonkRPC has no guard at all, so a guest can honk any vehicle. Every receiver " +
+            "plays the horn; on the host it also makes EnemyDirector investigate the vehicle's " +
+            "position (35 m), so repeated honks keep pulling monsters toward the vehicles. Repeats " +
+            "every HonkStormInterval seconds on every vehicle in the level.");
+        HonkStormInterval = config.Bind("Raid", "HonkStormInterval", 1f,
+            "Seconds between honks while Honk Storm is on (minimum 0.2).");
+        PhantomJump = config.Bind("Troll", "PhantomJump", false,
+            "Sends PlayerAvatar.JumpRPC(powerup=true) to everyone else on a timer: they see your " +
+            "avatar jump with the extra-jump sparkle and hear it while you stand still. JumpRPC is " +
+            "owner-gated and you own your avatar, so no bypass is involved; nothing physical changes.");
+        FakeHurt = config.Bind("Troll", "FakeHurt", false,
+            "Alternates PlayerHealth.UpdateHealthRPC between 'health-1 with hurt effect' and 'real " +
+            "health with heal effect' to everyone else: your model flashes red with a hurt sound, " +
+            "then green. Display-only on their side (death is a separate RPC); every cycle ends on " +
+            "your true health, and turning it off resyncs the real value. Skipped at 1 HP.");
+        FakeMotionInterval = config.Bind("Troll", "FakeMotionInterval", 1.5f,
+            "Seconds between Phantom Jump / Fake Hurt sends.");
+
         Invisible = config.Bind("Troll", "Invisible", false,
             "Same broadcast-position trick Flip Orbit Radius uses - spoofs the position your " +
             "client sends in PlayerAvatar.OnPhotonSerializeView, holding it at InvisibleHeight " +
@@ -997,6 +1368,26 @@ internal static class CheatState
         InvisibleHeight = config.Bind("Troll", "InvisibleHeight", 5000f,
             "World-space Y coordinate Invisible broadcasts instead of your real height - high " +
             "enough to clear any level's real ceiling by a wide margin.");
+        InvisibleOverCeiling = config.Bind("Troll", "InvisibleOverCeiling", false,
+            "EXPERIMENTAL. Instead of the sky, Invisible puts you a few metres ABOVE your real spot " +
+            "(InvisibleOverCeilingHeight), i.e. above the ceiling of an indoor level. Other players' " +
+            "voice playback then sits only that far away: they still hear you, muffled like through a " +
+            "wall (the game's own occlusion low-pass), instead of not at all. Risk: anyone outside the " +
+            "building, on a higher floor or looking through an opening can still see you up there.");
+        InvisibleOverCeilingHeight = config.Bind("Troll", "InvisibleOverCeilingHeight", 9f,
+            new ConfigDescription("How far above your real position the over-ceiling mode places you, metres.",
+                new AcceptableValueRange<float>(4f, 25f)));
+        InvisibleSpeak = config.Bind("Troll", "InvisibleSpeak", true,
+            "Говорить голосом в невидимке БЕЗ разоблачения: сбрасываем Recorder.UserData -> null у " +
+            "нашего PhotonVoiceView, чтобы получатели создали анонимного Speaker на GameObject-е " +
+            "PunVoiceClient (путь PunVoiceClient.InstantiateSpeakerForRemoteVoice ветка userData == null), " +
+            "и наш голос слышно у всех БЕЗ 3D-позиции аватара (который улетел в небо по InvisibleHeight). " +
+            "То же решение, что GhostSpeak, но для режима Invisible / Fly+Noclip+FlyAutoHide. Не трогает " +
+            "mute/push-to-talk - если игра решает не передавать, передачи и не будет. По умолчанию ВКЛ.");
+        InvisibleBlockGrab = config.Bind("Troll", "InvisibleBlockGrab", false,
+            "В невидимке не давать хвату PhysGrabber работать: иначе луч и перенос ценностей " +
+            "(SetPositionRPC с нашей фейковой высоты) мгновенно выдают наше наличие и позицию в небе. " +
+            "По умолчанию ВЫКЛ, так как ломает нормальный коопный хват.");
         InvisibleRevealWhileTalking = config.Bind("Troll", "InvisibleRevealWhileTalking", false,
             "Reported live 2026-09-11: with this on, other players could see you at your real " +
             "position basically the whole time you were talking with friends - broadcasting the " +
@@ -1023,7 +1414,116 @@ internal static class CheatState
             "How far the fake aim point wanders from the real one, in world units - GlitchyFlashlight's " +
             "own sweep radius, not related to the light's actual range/intensity.");
 
-        GhostRider = config.Bind("Troll", "GhostRider", false,
+        FakePing = config.Bind("Troll", "FakePing", false,
+            "A different kind of broadcast field from everything else in this tab - not animation or " +
+            "position, a UI number. PlayerAvatar.OnPhotonSerializeView also sends 'playerPing' " +
+            "(confirmed internal int in the decompiled source, recomputed from PhotonNetwork.GetPing() " +
+            "every 6 seconds on your own machine) - confirmed in MenuPageLobby.SetPingText that this is " +
+            "exactly the number shown next to your name in the lobby player list, colour-coded green/" +
+            "yellow/orange/red at the 50/100/200ms thresholds. Same backup/restore-around-the-call " +
+            "shape as every other Troll spoof here (only the instant it's serialized is touched), so " +
+            "your own real connection and this same lobby list on YOUR screen are unaffected - purely " +
+            "cosmetic, zero gameplay/physics risk (no position or Rigidbody field involved at all, " +
+            "unlike Invisible/Flip/GhostRider). Works for guest or host.");
+        FakePingValue = config.Bind("Troll", "FakePingValue", 9999,
+            "Fake ping value (ms) broadcast while Fake Ping is on - 9999 reads as an obvious joke/" +
+            "red flashing number in the lobby list; a small value like 1-10 instead brags a suspiciously " +
+            "perfect connection. Any whole number up to 2147483647 works - the game sends it as a plain " +
+            "int, the 9999 cap was only the old menu stepper.");
+        // Typing a number in the text field below sets the value; stepping the value updates the text.
+        FakePingText = config.Bind("Troll", "FakePingText", FakePingValue.Value.ToString(),
+            "Fake ping typed by hand (whole number, ms). Mirrors FakePingValue.");
+        FakePingText.SettingChanged += (_, _) =>
+        {
+            if (int.TryParse(FakePingText.Value.Trim(), out int typed) && typed >= 0) FakePingValue.Value = typed;
+        };
+        FakePingValue.SettingChanged += (_, _) =>
+        {
+            if (!(int.TryParse(FakePingText.Value.Trim(), out int shown) && shown == FakePingValue.Value))
+                FakePingText.Value = FakePingValue.Value.ToString();
+        };
+
+        FakeOvercharge = config.Bind("Troll", "FakeOvercharge", false,
+            "Another player-owned component with its own OnPhotonSerializeView, not PlayerAvatar's - " +
+            "PhysGrabber also broadcasts 'physGrabBeamOverCharge' (confirmed internal byte in the " +
+            "decompiled source). Confirmed in PlayerAvatarOverchargeVisuals.cs (runs on every client, " +
+            "not just isLocal) that this single byte drives a real light, a particle system AND a " +
+            "looping charge-up sound at your hand's grab-beam origin - so everyone else sees (and " +
+            "hears) your hand glowing/sparking/humming like it's about to overheat, permanently, for " +
+            "no reason, even though NoOvercharge (a separate toggle) means it never actually will. " +
+            "Purely cosmetic - no position/physics touched, same safety profile as Fake Ping. Works " +
+            "for guest or host.");
+        FakeOverchargeValue = config.Bind("Troll", "FakeOverchargeValue", 200,
+            "Fake overcharge intensity (0-200, matches the real field's own range - the game computes " +
+            "it as a stored percentage doubled) - 200 is full glow/particles/volume, lower values are " +
+            "a dimmer, quieter version of the same effect.");
+
+        DiscoBeam = config.Bind("Troll", "DiscoBeam", false,
+            "Third field on PhysGrabber's own OnPhotonSerializeView: 'colorState' (public int, 0 orange / " +
+            "1 green / 2 purple / 3 blue - decompiled PhysGrabber.ColorStates). On a remote client " +
+            "ColorStates() recolours the grab beam, both grab-point visuals, the arm orbs and the arm " +
+            "light from this one int. We swap it only for the instant of writing and restore it right " +
+            "after, so your own beam stays orange. Cosmetic only, no position/physics touched. Note: " +
+            "remote FixedUpdate resets colorState to 0 every physics tick (ColorStateTick has no isLocal " +
+            "gate), so on their side the colour probably pulses with each network update rather than " +
+            "holding steady - not verifiable without a second client. Green is the colour the game " +
+            "itself uses when an enemy targets a player. Works for guest or host.");
+        DiscoBeamMode = config.Bind("Troll", "DiscoBeamMode", 0,
+            "0 = cycle through all four colours, 1 = green (looks hunted), 2 = purple, 3 = blue.");
+        DiscoBeamSpeed = config.Bind("Troll", "DiscoBeamSpeed", 3f,
+            "Colour changes per second in cycle mode.");
+
+        GhostObserver = config.Bind("Troll", "GhostObserver", false,
+            "Ghost observer (guest only): the local avatar is never announced to the other clients - the " +
+            "mod drops outgoing Photon events 202/204 and every RPC/serialize record that belongs to " +
+            "views this client created (see GhostObserverHack.cs), and keeps the Photon Voice client " +
+            "from connecting. Nobody gets your avatar, so you are in nobody's player list. You cannot " +
+            "grab, use items, talk or take damage. Still visible to everyone: your Photon room entry " +
+            "(OnPlayerEnteredRoom, nickname, PlayerCount). Enable BEFORE joining the room - the decision " +
+            "is latched in NetworkManager.Start of each scene.");
+        GhostObserverHear = config.Bind("Troll", "GhostObserverHear", true,
+            "Ghost observer listen-only: still joins the Photon Voice room so you hear everyone (and their " +
+            "mouth animation plays - it is driven by the received audio), but Recorder.StartRecording is " +
+            "blocked, so no voice stream of yours is ever created or announced. Other voice clients only " +
+            "see an extra actor in the voice room, nothing in-game.");
+        GhostFollow = config.Bind("Troll", "GhostFollow", false,
+            "Ghost observer only: keeps your local-only body behind and above the player picked in the " +
+            "Players tab (or their death head when they are dead), so you can watch them without flying " +
+            "by hand. Uses the Noclip body state (kinematic, collider off). Does nothing unless the ghost " +
+            "is really active - otherwise everyone would see you trailing them.");
+        GhostFollowDistance = config.Bind("Troll", "GhostFollowDistance", 3f,
+            "How far behind the followed player to stay, metres (height is half of it).");
+        TeammatesOnMap = config.Bind("Vision", "TeammatesOnMap", true,
+            "Shows every other living player on the in-game map (Tab) in their colour - the game itself only " +
+            "shows you and dead players' heads. Uses the game's own MapCustom markers. Local only.");
+        HiddenPlayerAlert = config.Bind("Troll", "HiddenPlayerAlert", true,
+            "Island notification when someone is in the Photon room but has no avatar on your side for 8+ " +
+            "seconds (another ghost observer or a hidden player). Every in-game list is built from avatars, so " +
+            "they show up nowhere else. Local only.");
+        GhostFollowEyes = config.Bind("Troll", "GhostFollowEyes", false,
+            "Ghost follow: sit at the followed player's eyes and turn the camera where they look (their " +
+            "PlayerVisionTarget.VisionTransform is network-synced; turned via CameraAim.AimTargetSet, the game's " +
+            "own dead-view turn). Off = behind and above them, free look.");
+        GhostSpeak = config.Bind("Troll", "GhostSpeak", false,
+            "Ghost observer: let your microphone go out anyway. The game normally tags each outgoing voice " +
+            "stream with the Recorder.UserData = your PhotonVoiceView.ViewID so receivers find your " +
+            "PlayerVoiceChat Speaker; a ghost has no PhotonView on other clients, so if we also set UserData " +
+            "to null, PunVoiceClient.InstantiateSpeakerForRemoteVoice falls into the 'userData == null' branch " +
+            "(confirmed in the decompile) and spawns an anonymous Speaker as a child of the PunVoiceClient " +
+            "GameObject. The result: everyone hears you, but as a disembodied voice from the NetworkManager " +
+            "position (not from a player's head). Overrides the listen-only mic block.");
+        GhostTelekinesis = config.Bind("Troll", "GhostTelekinesis", false,
+            "Ghost observer only: a short bind (default none) picks up / drops the PhysGrabObject your crosshair " +
+            "is on and holds it in front of your camera. Driven by PhysGrabObject.Teleport, which goes through " +
+            "the object's OWN view (SetPositionRPC to the host) - that view is not ours, so the ghost's filter " +
+            "lets it pass. Does not fight the host for grabbed items (ownership is unchanged); it just teleports " +
+            "the object every tick, same loophole as TrapRoom/LockAllDoors. Shift + the release press slams the " +
+            "object ~2.5m along the camera forward (one-frame SetPositionRPC - reads as a hard shove on the " +
+            "host, not a real impulse). A thin cyan beam from the camera to the held object makes it visible.");
+        GhostTelekinesisDistance = config.Bind("Troll", "GhostTelekinesisDistance", 3.5f,
+            "How far in front of your camera the held item sits, metres. Mouse wheel while holding tweaks it live.");
+
+        GhostRider =config.Bind("Troll", "GhostRider", false,
             "Same broadcast-spoofing trick, on a field nothing else here touches: PlayerAvatar." +
             "OnPhotonSerializeView also sends PlayerController.CollisionGrounded.physRiding/" +
             "physRidingID/physRidingPosition (all public, confirmed in the decompiled " +
@@ -1046,6 +1546,23 @@ internal static class CheatState
             "client-side call can bypass, so that's the real floor no matter how low the interval " +
             "below is set. Works for guest or host - it's just sending a normal chat message.");
 
+        ChatToIsland = config.Bind("Chat", "ChatToIsland", false,
+            "Show every chat message from other players as an island notification (the game only speaks them).");
+        MuteOthersTts = config.Bind("Chat", "MuteOthersTts", false,
+            "Do not speak other players' chat messages on this machine (they are still logged and can be shown " +
+            "on the island). Your own messages are spoken as usual. Local only.");
+        Pings = config.Bind("Chat", "Pings", true,
+            "Pings between players who all run this mod: the bound Ping key marks the spot you look at for you " +
+            "and every other mod user in the room (custom Photon event 87; players without the mod see nothing).");
+        PingSeconds = config.Bind("Chat", "PingSeconds", 8f,
+            new ConfigDescription("How long a ping stays on screen, seconds.", new AcceptableValueRange<float>(2f, 30f)));
+        QuickPhrase1 = config.Bind("Chat", "QuickPhrase1", "Сюда!",
+            "Quick chat phrase 1 - sent to the normal chat by its button or bound key (QuickChatHack).");
+        SteamProfileHunter.UrlInput = config.Bind("Lobby", "SteamHunterUrl", "",
+            "URL Steam-профиля для поиска лобби. Принимается /profiles/, /id/vanity, или SteamID64.");
+        QuickPhrase2 = config.Bind("Chat", "QuickPhrase2", "Нужна помощь! У меня {hp} HP", "Quick chat phrase 2.");
+        QuickPhrase3 = config.Bind("Chat", "QuickPhrase3", "Добыча {haul} из {quota}, до точки {near}", "Quick chat phrase 3.");
+        QuickPhrase4 = config.Bind("Chat", "QuickPhrase4", "Осторожно, монстр рядом!", "Quick chat phrase 4.");
         ChatSpamText = config.Bind("Troll", "ChatSpamText", "привет|как дела|гг",
             "Phrases to spam, separated by | - cycled in order, looping back to the start.");
 
@@ -1086,10 +1603,29 @@ internal static class CheatState
             "Manual/decorative \"now playing\" text, used when Spotify integration above is off " +
             "or Spotify isn't running - no real audio hook behind it in that case, just a static " +
             "prop like the game's own HUD chrome.");
+        HudLyrics = config.Bind("Hud", "HudLyrics", true,
+            "Synced song text on the main menu (like Kimstar's WorldLyrics): the line being sung " +
+            "big and filling word by word, the previous and next lines dim. Follows the Spotify " +
+            "track read from the window title (see HudMediaPlayerUseSpotify). The title has no " +
+            "position, so the clock starts at 0 when the track changes - use the offset below if " +
+            "you started mid-song.");
+        HudLyricsInGame = config.Bind("Hud", "HudLyricsInGame", false,
+            "Also show the song text during a run (lower centre of the screen), not only in menus.");
+        HudLyricsOnline = config.Bind("Hud", "HudLyricsOnline", true,
+            "Look the song up on lrclib.net when there is no local .lrc for it. Found text is saved " +
+            "to BepInEx/config/RepoCheatMenu/lyrics so each song is fetched once; off = only your " +
+            "own .lrc files in that folder (named \"Artist - Title.lrc\").");
+        HudLyricsOffset = config.Bind("Hud", "HudLyricsOffset", 0f,
+            new ConfigDescription("Shifts the lyrics clock in seconds. Positive shows lines earlier.",
+                new AcceptableValueRange<float>(-30f, 30f)));
         HudPlayerStats = BindHudWidget(config, "HudPlayerStats", "Игрок", true, 20f, 20f, "#0A84FF");
         HudTargetInfo = BindHudWidget(config, "HudTargetInfo", "Цель", true, 20f, 122f, "#FF3B30");
         HudMediaPlayer = BindHudWidget(config, "HudMediaPlayer", "Плеер", true, 20f, 244f, "#34C759");
         HudKeybinds = BindHudWidget(config, "HudKeybinds", "Бинды", false, 20f, 372f, "#FF9500");
+        HudTeam = BindHudWidget(config, "HudTeam", "Команда", false, 20f, 440f, "#34C759");
+        HudEnemies = BindHudWidget(config, "HudEnemies", "Враги", false, 20f, 540f, "#FF3B30");
+        HudLoot = BindHudWidget(config, "HudLoot", "Лут", false, 20f, 640f, "#FFCC00");
+        HudRun = BindHudWidget(config, "HudRun", "Забег", false, 20f, 740f, "#0A84FF");
 
         FakeSoundTargetName = config.Bind("Troll", "FakeSoundTargetName", "None",
             "Target player, shared by Scare Sound, Cage and Yeet below - pick from the list " +
@@ -1218,6 +1754,12 @@ internal static class CheatState
             "moment this turned on - via the same Teleport(position, rotation) loophole every " +
             "other grabbable prop uses. Turn on while doors are closed to actually lock people " +
             "in/out; turning it on mid-open just jams it open instead. Works for guest or host.");
+        BlackHole = config.Bind("Raid", "BlackHole", false,
+            "Showcase 'black hole': every ValuableObject and every PhysGrabHinge (doors, cabinet " +
+            "lids, crate hinges) on the level orbits a single anchor 55m above the loot's center " +
+            "of mass - cartoon tornado picks the room clean. Same SetPositionRPC loophole as the " +
+            "rest of the raid tab; throttled to ~12 valuables and ~6 doors per tick so Photon's " +
+            "per-room RPC cap does not kick in. Works for guest or host, and for a ghost.");
 
         TrapRoom = config.Bind("Raid", "TrapRoom", false,
             "Swarm the Group's targeting, plus rips every door within ~15m of that cluster off " +
@@ -1252,13 +1794,15 @@ internal static class CheatState
             "guest or host.");
 
         SendTestPacket = config.Bind("Misc", "SendTestPacket", false,
-            "Checkbox wired to PacketTestHack.OnToggled(): turning it on starts a bounded burst " +
-            "(a fixed packet count at a capped rate, drained by PacketTestHack.Apply() on the " +
-            "per-tick loop) of empty custom Photon room events (RaiseEvent) to the master " +
-            "client, rather than relying on an existing PunRPC method on some game prefab, so " +
-            "it works standalone. Turning it off early cancels whatever's left of the burst. " +
-            "Scaffold only for now - extend PacketTestHack's payload/handler once there's a " +
-            "real effect (e.g. movement) to drive from it.");
+            "Checkbox wired to PacketTestHack.OnToggled(): turning it on starts a CONTINUOUS " +
+            "stream (not a bounded burst - runs indefinitely at the interval below, drained by " +
+            "PacketTestHack.Apply() on the per-tick loop) of empty custom Photon room events " +
+            "(RaiseEvent) to the master client, rather than relying on an existing PunRPC " +
+            "method on some game prefab, so it works standalone. Turning it off stops it; the " +
+            "setting persists between sessions, so leaving it ON resumes sending once you're " +
+            "back in a room next launch, without needing to re-click it. Scaffold only for now " +
+            "- extend PacketTestHack's payload/handler once there's a real effect (e.g. " +
+            "movement) to drive from it.");
         PacketTestIntervalMs = config.Bind("Misc", "PacketTestIntervalMs", 500,
             "How many milliseconds PacketTestHack.Apply() waits between sends while the toggle " +
             "above is on (was a hardcoded 500ms/~2 per second before this).");
@@ -1308,6 +1852,18 @@ internal static class CheatState
         AntiCrashQuarantineSeconds = config.Bind("AntiCrash", "AntiCrashQuarantineSeconds", 5,
             "На сколько секунд отправляется в карантин игрок-нарушитель (если карантин включён).");
 
+        IgnoreDeath = config.Bind("Ignore", "IgnoreDeath", false,
+            "Игнор: убийство, пришедшее по сети от другого игрока (например хоста с модом), на этой " +
+            "машине не выполняется. Своя честная смерть не режется.");
+        IgnoreHurt = config.Bind("Ignore", "IgnoreHurt", false,
+            "Игнор: урон, пришедший по сети от другого игрока (включая хоста), не применяется.");
+        IgnoreImpulse = config.Bind("Ignore", "IgnoreImpulse", false,
+            "Игнор: чужие толчки/импульсы по вашему персонажу.");
+        IgnoreTumble = config.Bind("Ignore", "IgnoreTumble", false,
+            "Игнор: чужие принудительные падения, броски и вращение (tumble).");
+        IgnoreHealthSet = config.Bind("Ignore", "IgnoreHealthSet", false,
+            "Игнор: принудительная установка здоровья вам другим игроком.");
+
         MultiRoomExtraCount = config.Bind("Misc", "MultiRoomExtraCount", 2,
             "Sibling Rooms: how many EXTRA independent rooms to create alongside the one you're " +
             "already hosting (so 2 here means 3 real rooms total, including your own). Each is " +
@@ -1317,6 +1873,69 @@ internal static class CheatState
             "Sibling Rooms: max players for each of the extra rooms created above. Vanilla cap " +
             "is 6 - going well past that (30-50-ish) has never been tested for how the game's " +
             "own physics/enemy/level sync holds up with that many people actually in one room.");
+
+        Optimization = config.Bind("Misc", "Optimization", false,
+            "FPS boost for weak PCs (idea from the Potato Performance mod, own implementation): " +
+            "turns off the heavy visual settings listed below. Applies instantly, no restart, and " +
+            "turning it off puts every value back (the game's own Graphics settings are re-applied). " +
+            "Re-asserted once a second because the game re-applies its own settings on scene load.");
+        OptShadows = config.Bind("Misc", "OptShadows", true, "Optimization: disable shadows entirely.");
+        OptAntiAliasing = config.Bind("Misc", "OptAntiAliasing", true, "Optimization: disable anti-aliasing.");
+        OptPixelLights = config.Bind("Misc", "OptPixelLights", true, "Optimization: no per-pixel lights.");
+        OptLodBias = config.Bind("Misc", "OptLodBias", true,
+            "Optimization: lower the LOD bias to 0.5 (distant objects use simpler models sooner).");
+        OptSoftParticles = config.Bind("Misc", "OptSoftParticles", true, "Optimization: no soft particles / soft vegetation.");
+        OptReflectionProbes = config.Bind("Misc", "OptReflectionProbes", true, "Optimization: no realtime reflection probes.");
+        OptPostProcessing = config.Bind("Misc", "OptPostProcessing", true,
+            "Optimization: turn off bloom, film grain, motion blur, lens distortion and chromatic " +
+            "aberration (vignette and colour grading stay, the game uses them for damage/death feedback).");
+        OptFog = config.Bind("Misc", "OptFog", false, "Optimization: disable fog (changes how levels look).");
+        BackgroundFpsLimit = config.Bind("Misc", "BackgroundFpsLimit", false,
+            "Cap the frame rate at BackgroundFps while the game window is not focused (VSync is switched off for " +
+            "that time). The game's own FPS/VSync settings come back on focus.");
+        BackgroundFps = config.Bind("Misc", "BackgroundFps", 15,
+            new ConfigDescription("Frame rate cap while unfocused.", new AcceptableValueRange<int>(5, 60)));
+        MuteInBackground = config.Bind("Misc", "MuteInBackground", false,
+            "Silence all game sound while the window is not focused. Your microphone keeps working.");
+
+        MainScreen = config.Bind("Hud", "MainScreen", false,
+            "Rockstar-style main screen over the game's main menu: a dimmed lock screen with a big clock and " +
+            "the date; a click (or Space/Enter) slides the clock away and shows a row of round buttons that " +
+            "call the same actions as the game's own main-menu buttons. The game's page underneath is " +
+            "hidden and ignores the cursor while this is visible. Only shown on the main page, and not " +
+            "while one of the mod menus is open.");
+        MainScreenStartOpen = config.Bind("Hud", "MainScreenStartOpen", false,
+            "Skip the clock: show the button row right away.");
+
+        HudIsland = config.Bind("Hud", "HudIsland", true,
+            "Dynamic Island at the top centre (Rockstar-style pill): notifications, GPS to the " +
+            "extraction, current song with lyrics, clock and ping at its sides.");
+        HudIslandScale = config.Bind("Hud", "HudIslandScale", 2f,
+            new ConfigDescription("Island size: canvas pixels per GUI unit (2 = Rockstar at GUI scale 2).",
+                new AcceptableValueRange<float>(1f, 4f)));
+        HudScale = config.Bind("Hud", "HudScale", 2f,
+            new ConfigDescription("HUD card size: canvas pixels per Rockstar GUI unit (2 = Rockstar at GUI scale 2).",
+                new AcceptableValueRange<float>(1f, 4f)));
+        HudIslandNotifications = config.Bind("Hud", "HudIslandNotifications", true,
+            "Island expands for 2.5 s when you switch a feature on or off.");
+        HudIslandExtraction = config.Bind("Hud", "HudIslandExtraction", true,
+            "Island shows the GPS target: distance, direction arrow, haul and extraction points done.");
+        HudIslandMusic = config.Bind("Hud", "HudIslandMusic", true,
+            "Island shows the Spotify track (with an equalizer bubble) when nothing more important is up.");
+        HudIslandLyrics = config.Bind("Hud", "HudIslandLyrics", true,
+            "Island shows the lyric line being sung instead of the track name, when lyrics are found.");
+        HudIslandSides = config.Bind("Hud", "HudIslandSides", true,
+            "Clock to the left and ping bars to the right of the island during a run.");
+        HudIslandBlur = config.Bind("Hud", "HudIslandBlur", true,
+            "Blur the game picture under the island (GPU copy of the game's render texture, no read-back). " +
+            "Off draws a plain dark pill - use that if you ever see frame-time spikes.");
+        HudIslandTarget = config.Bind("Hud", "HudIslandTarget", true,
+            "Island shows the player picked in \"Игроки\" as a card (colour, name, hp bar) while they are within 30 m.");
+        HudIslandText = config.Bind("Hud", "HudIslandText", "",
+            "Your own text for the empty island. Several phrases separated by | take turns every 4 s.");
+        GpsMode = config.Bind("Hud", "GpsMode", "Evacuation",
+            new ConfigDescription("What the GPS points at: Evacuation (nearest active extraction), Truck, Mark (a point you set), Off.",
+                new AcceptableValueList<string>("Evacuation", "Truck", "Mark", "Off")));
 
         RegisterKeybinds(config);
     }
@@ -1345,6 +1964,7 @@ internal static class CheatState
         KeybindManager.RegisterToggle(config, "Fly", Fly);
         KeybindManager.RegisterToggle(config, "Noclip", Noclip);
         KeybindManager.RegisterToggle(config, "FlySprintBoost", FlySprintBoost);
+        KeybindManager.RegisterToggle(config, "FlyAutoHide", FlyAutoHide);
         KeybindManager.RegisterToggle(config, "DeadFly", DeadFly);
 
         KeybindManager.RegisterToggle(config, "EspPlayers", EspPlayers);
@@ -1360,7 +1980,10 @@ internal static class CheatState
         KeybindManager.RegisterToggle(config, "EyeColor", EyeColor);
         KeybindManager.RegisterToggle(config, "MimicHostName", MimicHostName);
         KeybindManager.RegisterToggle(config, "MimicHostSkin", MimicHostSkin);
+        KeybindManager.RegisterAction(config, "CopyPickedIdentity", CopyIdentityHack.CopyPicked);
         KeybindManager.RegisterToggle(config, "BigPupils", BigPupils);
+        KeybindManager.RegisterToggle(config, "ExpressionLock", ExpressionLock);
+        KeybindManager.RegisterToggle(config, "EyeOverride", EyeOverride);
 
         KeybindManager.RegisterToggle(config, "BetterVision", BetterVision);
         KeybindManager.RegisterToggle(config, "ThirdPerson", ThirdPerson);
@@ -1394,6 +2017,8 @@ internal static class CheatState
         KeybindManager.RegisterToggle(config, "MonsterBait", MonsterBait);
         KeybindManager.RegisterToggle(config, "RemovePillarLimit", RemovePillarLimit);
         KeybindManager.RegisterToggle(config, "HealSpam", HealSpam);
+        KeybindManager.RegisterToggle(config, "PlayerCatcher", PlayerCatcher);
+        KeybindManager.RegisterToggle(config, "PlayerCatcherTargetOnly", PlayerCatcherTargetOnly);
         KeybindManager.RegisterToggle(config, "CartRam", CartRam);
         KeybindManager.RegisterToggle(config, "MasterRpcSelfBypass", MasterRpcSelfBypass);
         KeybindManager.RegisterToggle(config, "InfiniteChargingStation", InfiniteChargingStation);
@@ -1430,11 +2055,94 @@ internal static class CheatState
         KeybindManager.RegisterToggle(config, "FlipShowSelf", FlipShowSelf);
         KeybindManager.RegisterToggle(config, "TPose", TPose);
         KeybindManager.RegisterToggle(config, "GhostCrawl", GhostCrawl);
+        KeybindManager.RegisterToggle(config, "PhantomSprint", PhantomSprint);
+        KeybindManager.RegisterToggle(config, "AnimSpeedSpoof", AnimSpeedSpoof);
+        KeybindManager.RegisterToggle(config, "HonkStorm", HonkStorm);
+        KeybindManager.RegisterToggle(config, "KillFx", KillFx);
+        KeybindManager.RegisterToggle(config, "EspTraps", EspTraps);
+        KeybindManager.RegisterToggle(config, "EspArrows", EspArrows);
+        KeybindManager.RegisterToggle(config, "JumpCircles", JumpCircles);
+        KeybindManager.RegisterToggle(config, "EspBoxes", EspBoxes);
+        KeybindManager.RegisterToggle(config, "FriendMarkers", FriendMarkers);
+        KeybindManager.RegisterToggle(config, "TargetFx", TargetFx);
+        KeybindManager.RegisterToggle(config, "CustomFog", CustomFog);
+        KeybindManager.RegisterToggle(config, "LobbyAlerts", LobbyAlerts);
+        KeybindManager.RegisterToggle(config, "EnemyAlert", EnemyAlert);
+        KeybindManager.RegisterToggle(config, "HaulAlert", HaulAlert);
+        KeybindManager.RegisterToggle(config, "LowHealthAlert", LowHealthAlert);
+        KeybindManager.RegisterToggle(config, "DeathRecap", DeathRecap);
+        KeybindManager.RegisterToggle(config, "DamageAlert", DamageAlert);
+        KeybindManager.RegisterToggle(config, "StableCamera", StableCamera);
+        KeybindManager.RegisterToggle(config, "Zoom", Zoom);
+        KeybindManager.RegisterToggle(config, "PhotoMode", PhotoMode);
+        KeybindManager.RegisterToggle(config, "StreamerMode", StreamerMode);
+        // Toggles that were not bindable at all - a middle click on their rows did nothing.
+        KeybindManager.RegisterToggle(config, "EspCarts", EspCarts);
+        KeybindManager.RegisterToggle(config, "NoGrabMaxTime", NoGrabMaxTime);
+        KeybindManager.RegisterToggle(config, "MimicFollowPicked", MimicFollowPicked);
+        KeybindManager.RegisterToggle(config, "KillFxPlayers", KillFxPlayers);
+        KeybindManager.RegisterToggle(config, "TargetFxEnemies", TargetFxEnemies);
+        KeybindManager.RegisterToggle(config, "Optimization", Optimization);
+        KeybindManager.RegisterToggle(config, "BackgroundFpsLimit", BackgroundFpsLimit);
+        KeybindManager.RegisterToggle(config, "MuteInBackground", MuteInBackground);
+        KeybindManager.RegisterToggle(config, "HudIsland", HudIsland);
+        KeybindManager.RegisterToggle(config, "HudLyrics", HudLyrics);
+        KeybindManager.RegisterToggle(config, "LoadingForceSkip", LoadingForceSkip);
+        KeybindManager.RegisterAction(config, "TakeScreenshot", PhotoModeHack.TakeScreenshot);
+        KeybindManager.RegisterToggle(config, "PhantomJump", PhantomJump);
+        KeybindManager.RegisterToggle(config, "FakeHurt", FakeHurt);
+        KeybindManager.RegisterAction(config, "HonkAll", HonkHack.HonkAll);
+        KeybindManager.RegisterAction(config, "Ping", PingSystem.PingHere);
+        KeybindManager.RegisterToggle(config, "Pings", Pings);
+        KeybindManager.RegisterToggle(config, "ChatToIsland", ChatToIsland);
+        KeybindManager.RegisterToggle(config, "MuteOthersTts", MuteOthersTts);
+        KeybindManager.RegisterAction(config, "QuickPhrase1", QuickChatHack.Send1);
+        KeybindManager.RegisterAction(config, "QuickPhrase2", QuickChatHack.Send2);
+        KeybindManager.RegisterAction(config, "QuickPhrase3", QuickChatHack.Send3);
+        KeybindManager.RegisterAction(config, "QuickPhrase4", QuickChatHack.Send4);
+        KeybindManager.RegisterAction(config, "LoadPreset1", PresetsHack.Load1);
+        KeybindManager.RegisterAction(config, "LoadPreset2", PresetsHack.Load2);
+        KeybindManager.RegisterAction(config, "LoadPreset3", PresetsHack.Load3);
+        KeybindManager.RegisterAction(config, "PresetUndo", PresetsHack.Undo);
+        KeybindManager.RegisterAction(config, "UnlockAllCosmetics", CosmeticUnlockHack.UnlockAll);
+        KeybindManager.RegisterToggle(config, "AllEyesOnMe", AllEyesOnMe);
         KeybindManager.RegisterToggle(config, "Invisible", Invisible);
         KeybindManager.RegisterToggle(config, "InvisibleRevealWhileTalking", InvisibleRevealWhileTalking);
+        KeybindManager.RegisterToggle(config, "InvisibleSpeak", InvisibleSpeak);
+        KeybindManager.RegisterToggle(config, "InvisibleBlockGrab", InvisibleBlockGrab);
+        KeybindManager.RegisterToggle(config, "InvisibleOverCeiling", InvisibleOverCeiling);
         KeybindManager.RegisterToggle(config, "GlitchyFlashlight", GlitchyFlashlight);
+        KeybindManager.RegisterToggle(config, "FakePing", FakePing);
+        KeybindManager.RegisterToggle(config, "FakeOvercharge", FakeOvercharge);
+        KeybindManager.RegisterToggle(config, "DiscoBeam", DiscoBeam);
+        KeybindManager.RegisterToggle(config, "GhostObserver", GhostObserver);
+        KeybindManager.RegisterToggle(config, "GhostFollow", GhostFollow);
+        KeybindManager.RegisterToggle(config, "GhostFollowEyes", GhostFollowEyes);
+        KeybindManager.RegisterToggle(config, "HiddenPlayerAlert", HiddenPlayerAlert);
+        KeybindManager.RegisterToggle(config, "TeammatesOnMap", TeammatesOnMap);
+        KeybindManager.RegisterAction(config, "GhostFollowNext", GhostFollowHack.NextTarget);
+        KeybindManager.RegisterAction(config, "GhostSpectateNext", GhostFollowHack.KeyNext, 0x27);   // Right arrow
+        KeybindManager.RegisterAction(config, "GhostSpectatePrev", GhostFollowHack.KeyPrev, 0x25);   // Left arrow
+        KeybindManager.RegisterAction(config, "GhostSpectateView", GhostFollowHack.KeyEyes, 0x26);   // Up arrow
+        KeybindManager.RegisterAction(config, "GhostJumpToPicked", GhostFollowHack.JumpToPicked);
+        KeybindManager.RegisterAction(config, "GhostJumpToValuable", GhostFollowHack.JumpToTopValuable);
+        KeybindManager.RegisterAction(config, "GhostJumpToTruck", GhostFollowHack.JumpToTruck);
+        KeybindManager.RegisterAction(config, "GhostJumpToExtraction", GhostFollowHack.JumpToExtraction);
+        KeybindManager.RegisterAction(config, "GhostPickHovered", GhostFollowHack.PickHoveredPlayer);
+        KeybindManager.RegisterToggle(config, "GhostObserverHear", GhostObserverHear);
+        KeybindManager.RegisterToggle(config, "GhostHearAll", GhostHearAll);
+        KeybindManager.RegisterToggle(config, "GhostSpeak", GhostSpeak);
+        KeybindManager.RegisterToggle(config, "GhostTelekinesis", GhostTelekinesis);
+        // Third name on this bind - previous defaults 0 and V both landed in a user .cfg already
+        // (V turned out to be REPO's own Push-to-Talk key, so a toggle on it fought PTT every tap).
+        // Renaming the key gets us a fresh entry with the new default. G is free in REPO
+        // (InputManager.cs: WASD / space / e / t / tab / ctrl / q / shift / 1-2 / v).
+        // Default V. User explicitly asked for V even though it collides with the game's
+        // Push-to-Talk - fine when PTT is off in REPO settings (voice-activated is the default).
+        KeybindManager.RegisterAction(config, "GhostGrab", GhostTelekinesisHack.Toggle, 0x56);
         KeybindManager.RegisterToggle(config, "GhostRider", GhostRider);
         KeybindManager.RegisterToggle(config, "GlitchyVoice", GlitchyVoice);
+        KeybindManager.RegisterToggle(config, "DemonVoice", DemonVoice);
         KeybindManager.RegisterToggle(config, "ChipmunkVoices", ChipmunkVoices);
         KeybindManager.RegisterToggle(config, "ChatSpam", ChatSpam);
         KeybindManager.RegisterToggle(config, "ChatSpamRichText", ChatSpamRichText);
@@ -1491,6 +2199,7 @@ internal static class CheatState
         KeybindManager.RegisterToggle(config, "ArenaLegitSabotage", ArenaLegitSabotage);
         KeybindManager.RegisterToggle(config, "SwarmStorm", SwarmStorm);
         KeybindManager.RegisterToggle(config, "LockAllDoors", LockAllDoors);
+        KeybindManager.RegisterToggle(config, "BlackHole", BlackHole);
         KeybindManager.RegisterToggle(config, "TrapRoom", TrapRoom);
         KeybindManager.RegisterToggle(config, "EnemyDropKill", EnemyDropKill);
         KeybindManager.RegisterToggle(config, "FreezeEnemies", FreezeEnemies);
@@ -1526,6 +2235,8 @@ internal static class CheatState
         KeybindManager.RegisterAction(config, "LateJoinRescan", LateJoinFixHack.RescanNow);
         KeybindManager.RegisterAction(config, "TeleportToNearestPlayer", LateJoinFixHack.TeleportToNearestPlayer);
         KeybindManager.RegisterAction(config, "CreateSiblingRooms", MultiRoomHack.CreateSiblingRooms);
+        KeybindManager.RegisterAction(config, "GpsNextTarget", Gps.NextMode);
+        KeybindManager.RegisterAction(config, "GpsSetMark", Gps.SetMarkHere);
 
         KeybindManager.RegisterToggle(config, "HudEnabled", HudEnabled);
         KeybindManager.RegisterToggle(config, "HudEditMode", HudEditMode);

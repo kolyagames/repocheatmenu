@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
@@ -181,7 +189,9 @@ internal static class KnockdownHack
     // knockdown pulse across every living player on the map instead of toggling anything.
     private static void ApplyDead(PlayerAvatar local)
     {
-        bool jumpDown = SemiFunc.InputDown(InputKey.Jump);
+        // Don't fire the dead-mode knockdown pulse while the player is typing in chat or the mod's
+        // menu - Space (Jump) was triggering a mass-knockdown every time a chat message had a space.
+        bool jumpDown = !UiInput.TypingInMenu() && SemiFunc.InputDown(InputKey.Jump);
         bool pressedNow = jumpDown && !_jumpWasDown;
         _jumpWasDown = jumpDown;
         if (!pressedNow) return;
@@ -328,7 +338,11 @@ internal static class KnockdownHack
         if (local == null) return;
 
         bool dead = GameReflect.Get<bool>(local, "deadSet");
-        bool want = CheatState.KnockdownBanish.Value && !dead;
+        // Banish's "tackle" step rides TriggerImpact -> TumbleImpactRPC on our own PlayerTumble
+        // view; under a session ghost that RPC is filtered, so the target never sees the hit and
+        // Banish silently does nothing but immobilise us.
+        bool muted = GhostObserverHack.LocalRpcIsMuted;
+        bool want = CheatState.KnockdownBanish.Value && !dead && !muted;
 
         if (!want)
         {
@@ -526,7 +540,7 @@ internal static class KnockdownHack
         away = away.sqrMagnitude > 0.01f ? away.normalized : Vector3.forward;
 
         Vector3 pos = target.transform.position + away * 6f + Vector3.down * 40f;
-        physGrabObject.Teleport(pos, target.transform.rotation);
+        GameReflect.TeleportSafe(physGrabObject, pos, target.transform.rotation, "KnockdownHack");
 
         // Actually killing them (not just stranding them under the map) needs real damage
         // authority over someone else's character - confirmed in the decompiled PlayerHealth

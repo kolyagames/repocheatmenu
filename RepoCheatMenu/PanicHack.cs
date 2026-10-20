@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using System.Reflection;
 using BepInEx.Configuration;
@@ -73,7 +81,13 @@ internal static class PanicHack
     {
         if (Hidden) return;
         CollectToggles();
+        DynamicIsland.Muted = true;
+        try { DeactivateInner(); }
+        finally { DynamicIsland.Muted = false; }
+    }
 
+    private static void DeactivateInner()
+    {
         var snapshot = new List<string>();
         foreach (KeyValuePair<string, ConfigEntry<bool>> kv in _toggles)
         {
@@ -88,6 +102,7 @@ internal static class PanicHack
         // Push the now-vanilla values into the live game objects before we stop ticking
         // altogether, instead of leaving everything frozen mid-effect.
         TimeTickPatch.RunApplyStatsOnce();
+        PhotoModeHack.ForceShow(); // HudRoot stops ticking while hidden: bring the game HUD back now
 
         Hidden = true;
         OverlayUI.Close();
@@ -100,7 +115,13 @@ internal static class PanicHack
     {
         if (!Hidden) return;
         CollectToggles();
+        DynamicIsland.Muted = true;
+        try { ReactivateInner(); }
+        finally { DynamicIsland.Muted = false; }
+    }
 
+    private static void ReactivateInner()
+    {
         int restored = 0;
         foreach (string name in CheatState.PanicSnapshot.Value.Split(';'))
         {

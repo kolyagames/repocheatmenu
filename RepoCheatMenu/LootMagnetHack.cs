@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -50,8 +58,18 @@ internal static class LootMagnetHack
         float step = PullSpeed * TickInterval;
         int solidMask = LayerMask.GetMask("Default");
 
-        foreach (ValuableObject valuable in valuables)
+        // A guest's Teleport is one SetPositionRPC to the host per object per tick. With dozens of valuables
+        // that ran into the hundreds of messages a second - past Photon's per-room message limit, which gets
+        // players disconnected. The host teleports locally, no messages, so no cap there.
+        bool guest = GameManager.Multiplayer() && !Photon.Pun.PhotonNetwork.IsMasterClient;
+        int budget = guest ? MaxMovesPerTickGuest : int.MaxValue;
+        int count = valuables.Count;
+        if (count == 0) return;
+        _cursor %= count;
+
+        for (int n = 0; n < count && budget > 0; n++)
         {
+            ValuableObject valuable = valuables[(_cursor + n) % count];
             if (valuable == null) continue;
 
             PhysGrabObject physObject = GameReflect.Get<PhysGrabObject>(valuable, "physGrabObject");
@@ -68,9 +86,15 @@ internal static class LootMagnetHack
                 HorizontalArriveDistance, OverlapCheckRadius, solidMask, out Vector3 next);
             if (!safe) continue;
 
-            physObject.Teleport(next, physObject.transform.rotation);
+            GameReflect.TeleportSafe(physObject, next, physObject.transform.rotation, "LootMagnetHack");
+            budget--;
+            // Next tick continues after the last one moved, so every valuable gets its turn.
+            if (budget == 0) _cursor = (_cursor + n + 1) % count;
         }
     }
+
+    private const int MaxMovesPerTickGuest = 6;
+    private static int _cursor;
 
     // Deterministic per-object offset (same instance ID always maps to the same spot, no jitter)
     // spread around the extraction area's center instead of every valuable converging on the

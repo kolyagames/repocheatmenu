@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -62,9 +70,10 @@ internal static class EconomyHack
             .ToList();
     }
 
-    public static void SpawnValuable()
+    public static void SpawnValuable() => SpawnValuable(CheatState.SpawnValuableName.Value);
+
+    public static void SpawnValuable(string wanted)
     {
-        string wanted = CheatState.SpawnValuableName.Value;
         if (string.IsNullOrEmpty(wanted) || wanted == "None")
         {
             Plugin.Log.LogInfo("Spawn Valuable had no effect - pick a valuable name first.");

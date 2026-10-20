@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
@@ -22,21 +30,24 @@ internal static class ExtractionActivatorHack
         if (Time.unscaledTime - _lastTry < TickInterval) return;
         _lastTry = Time.unscaledTime;
 
+        PlayerAvatar local = PlayerAvatar.instance;
+        if (local != null) RequestNearestIdle(local.transform.position);
+    }
+
+    // Only an Idle point. Requesting a finished one (the old "first point in the list") made the host set
+    // extractionPointActive and lock every other point (RoundDirector.ExtractionPointActivateRPC ->
+    // ExtractionPointsLock) while ButtonPress did nothing on it: the whole room's round got stuck.
+    internal static void RequestNearestIdle(Vector3 from)
+    {
         RoundDirector director = RoundDirector.instance;
         if (director == null) return;
         if (GameReflect.Get<bool>(director, "extractionPointActive")) return; // one's already active/running
 
         List<GameObject> points = GameReflect.Get<List<GameObject>>(director, "extractionPointList");
-        if (points == null) return;
+        if (points == null || points.Count == 0) return;
 
-        foreach (GameObject go in points)
-        {
-            if (go == null) continue;
-            PhotonView view = go.GetComponent<PhotonView>();
-            if (view == null) continue;
-
-            director.RequestExtractionPointActivation(view.ViewID);
-            return; // only need to kick off one - the game handles the rest of the sequence itself
-        }
+        ExtractionPoint idle = SemiFunc.ExtractionPointGetNearestNotActivated(from);
+        PhotonView view = idle != null ? idle.GetComponent<PhotonView>() : null;
+        if (view != null) director.RequestExtractionPointActivation(view.ViewID);
     }
 }

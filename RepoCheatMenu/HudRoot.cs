@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -67,16 +75,53 @@ internal static class HudRoot
         EnsureBuilt();
         TickEditModeCursor();
 
+        Guard("PhotoMode", PhotoModeHack.Tick); // decides what is visible this frame, before anything renders
         CustomGui.BeginFrame();
-        PlayerHud.Draw();
-        CustomOverlayUI.DrawIfVisible();
+        // Each part on its own: one of them throwing must not stop the others (or EndFrame) from running.
+        // World effects first, so every HUD part is drawn over them.
+        Guard("KillFx", KillFx.Draw);
+        Guard("TargetFx", TargetFx.Draw);
+        Guard("CustomFog", CustomFogHack.Apply);
+        Guard("Pings", PingSystem.Draw);
+        Guard("RockMainScreen", RockMainScreen.Draw);
+        Guard("BoxEsp", BoxEsp.Draw);
+        Guard("FriendMarkers", FriendMarkers.Draw);
+        Guard("RockEsp", RockEsp.Draw);
+        Guard("ArrowEsp", ArrowEsp.Draw);
+        Guard("JumpCircles", JumpCircles.Draw);
+        Guard("PlayerHud", PlayerHud.Draw);
+        Guard("DynamicIsland", DynamicIsland.Draw);
+        Guard("LyricsHud", LyricsHud.Draw);
+        Guard("RockNotify", RockNotify.Draw);
+        Guard("OptimizationHack", OptimizationHack.Tick);
+        Guard("CustomOverlayUI", CustomOverlayUI.DrawIfVisible);
         CustomGui.EndFrame();
+    }
+
+    private static float _nextGuardLog;
+
+    private static void Guard(string name, System.Action part)
+    {
+        try
+        {
+            part();
+        }
+        catch (System.Exception e)
+        {
+            CustomGui.ClearTransform();
+            CustomGui.NoInput = false;
+            if (Time.unscaledTime >= _nextGuardLog)
+            {
+                _nextGuardLog = Time.unscaledTime + 5f;
+                Plugin.Log.LogError($"Exception in {name}: {e}");
+            }
+        }
     }
 
     // HUD edit mode is toggled from inside a menu (so the cursor is already free at that point),
     // but the whole point is to keep dragging widgets after closing the menu - this claims the
-    // cursor for itself only once neither menu already owns it, and gives it back the moment edit
-    // mode turns off or a menu takes over, instead of each of the three systems independently
+    // cursor for itself only once neither menu already owns it, leaves it alone while a menu is open,
+    // and gives it back once edit mode is off and no menu is open, instead of each of the three systems independently
     // saving/restoring Cursor state (which stacks incorrectly once more than one is ever active
     // at the same time).
     private static bool _editCursorApplied;
@@ -85,7 +130,13 @@ internal static class HudRoot
 
     private static void TickEditModeCursor()
     {
-        bool wantsCursor = CheatState.HudEditMode.Value && !OverlayUI.IsOpen && !CustomOverlayUI.IsOpen;
+        // While a menu is open it owns the cursor (it saved the state on Show and restores it on Hide).
+        // This used to treat "menu open" like "edit mode off" and restore the pre-edit state - locked and
+        // hidden - every frame, so the menu lost its cursor, and the menu's own Hide then put back the
+        // edit-mode cursor, which stayed visible in normal play after edit mode was switched off.
+        if (OverlayUI.IsOpen || CustomOverlayUI.IsOpen) return;
+
+        bool wantsCursor = CheatState.HudEditMode.Value;
 
         if (wantsCursor)
         {

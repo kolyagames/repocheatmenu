@@ -19,3 +19,24 @@ skills/
 
 # BepInEx bridge scratch files (command.txt/result.txt for the debug bridge)
 **/RepoCheatMenu_Bridge/
+
+# Obfuscation build step (tools/obfuscate.ps1) - machine-specific resolved paths, and a
+# name->renamed-name map that must never leave this machine (it's the key to deobfuscating
+# a shipped build, kept only so a crash from an obfuscated build can be decoded locally).
+tools/obfuscar.generated.xml
+tools/obfuscar-mapping/
+
+# tools/check-real-refs.ps1 scratch project
+tools/.realref-check/
+
+# Machine-local build transcript (per-run paths)
+tools/build-log.txt
+
+# Third-party resources that we need locally but cannot redistribute:
+# - Apple SF Pro Display fonts (licensed only for UI mockups by Apple)
+# - Icon bitmaps rasterised from Rockstar's menu SVGs (their copyright)
+# Generate RockIconData.cs locally via tools/make-icons.py; see the
+# README.md files next to each for how to put them back.
+RepoCheatMenu/fonts/*.otf
+RepoCheatMenu/fonts/*.ttf
+RepoCheatMenu/RockIconData.cs

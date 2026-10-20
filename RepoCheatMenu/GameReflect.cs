@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -67,4 +75,31 @@ internal static class GameReflect
         }
         method?.Invoke(instance, args);
     }
+
+    // PhysGrabObject.Teleport is the universal "move this prop via SetPositionRPC" entry every raid
+    // and telekinesis feature uses. In practice it NREs intermittently on objects whose photonView /
+    // photonTransformView was torn down between the lookup and the call (scene change, ownership
+    // transfer mid-tick, object destroyed the same frame). Rather than repeating a try/catch at
+    // every call site - and silently losing which site surfaced the error - route them all through
+    // here; `caller` only tags the warning. Logs throttled per caller.
+    public static bool TeleportSafe(PhysGrabObject physObject, UnityEngine.Vector3 position, UnityEngine.Quaternion rotation, string caller)
+    {
+        if (physObject == null) return false;
+        try
+        {
+            physObject.Teleport(position, rotation);
+            return true;
+        }
+        catch (System.Exception ex)
+        {
+            long now = System.DateTime.UtcNow.Ticks;
+            if (!_teleportWarn.TryGetValue(caller, out long last) || now - last > 10_000_000L)
+            {
+                Plugin.Log.LogWarning("[" + caller + "] Teleport skipped: " + ex.GetType().Name + " (" + ex.Message + ")");
+                _teleportWarn[caller] = now;
+            }
+            return false;
+        }
+    }
+    private static readonly Dictionary<string, long> _teleportWarn = new();
 }

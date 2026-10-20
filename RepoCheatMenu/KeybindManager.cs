@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System;
 using System.Collections.Generic;
 using BepInEx.Configuration;
@@ -42,9 +50,9 @@ internal static class KeybindManager
         return vk;
     }
 
-    public static ConfigEntry<int> RegisterAction(ConfigFile config, string label, Action action)
+    public static ConfigEntry<int> RegisterAction(ConfigFile config, string label, Action action, int defaultVk = 0)
     {
-        ConfigEntry<int> vk = config.Bind("Keybinds", label + "Key", 0,
+        ConfigEntry<int> vk = config.Bind("Keybinds", label + "Key", defaultVk,
             $"Virtual-key code bound to action '{label}' (0 = unbound). Set by middle-clicking its row in the menu.");
         All.Add(new Keybind { Label = label, Vk = vk, Action = action, OnPress = action });
         return vk;
@@ -66,7 +74,16 @@ internal static class KeybindManager
         return null;
     }
 
-    public static void StartCapture(Keybind bind) => Capturing = bind;
+    // The new menu starts a capture on the middle button going DOWN; the next 30 ms poll then still saw
+    // that button held, counted it as a fresh press and bound "Mouse Middle" immediately. A capture only
+    // starts listening once every bindable key/button has been released.
+    private static bool _captureArmed;
+
+    public static void StartCapture(Keybind bind)
+    {
+        Capturing = bind;
+        _captureArmed = false;
+    }
 
     public static void Apply()
     {
@@ -83,6 +100,12 @@ internal static class KeybindManager
                 return;
             }
 
+            if (!_captureArmed)
+            {
+                if (!Win32.AnyBindableDown()) _captureArmed = true;
+                return;
+            }
+
             int pressed = Win32.PollNewlyPressedVk();
             if (pressed != 0)
             {
@@ -91,6 +114,8 @@ internal static class KeybindManager
             }
             return; // don't also fire binds while picking a new one
         }
+
+        if (UiInput.TypingInMenu()) return; // letters typed into a menu field are text, not hotkeys
 
         foreach (Keybind bind in All)
         {

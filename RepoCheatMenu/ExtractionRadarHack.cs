@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -30,9 +38,16 @@ internal static class ExtractionRadarHack
 
         Vector3 playerPos = local.transform.position;
         ExtractionPoint extraction = EconomyHack.FindActiveExtractionPoint(playerPos);
+        string suffix = "";
+        if (extraction == null && RoundDirector.instance != null)
+        {
+            // Nothing running: point at the nearest one still to be done - that is where to go next.
+            extraction = SemiFunc.ExtractionPointGetNearestNotActivated(playerPos);
+            suffix = " (не активна)";
+        }
         if (extraction == null)
         {
-            _label.text = "Extraction: none active";
+            _label.text = "Выход: нет точек";
             return;
         }
 
@@ -58,7 +73,7 @@ internal static class ExtractionRadarHack
             };
         }
 
-        _label.text = $"Extraction {arrow} {distance:0}m";
+        _label.text = $"Выход {arrow} {distance:0} м{suffix}";
     }
 
     private static void EnsureBuilt()

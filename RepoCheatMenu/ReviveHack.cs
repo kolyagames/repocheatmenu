@@ -1,23 +1,21 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 namespace RepoCheatMenu;
 
-// PlayerAvatar.ReviveRPC only checks SemiFunc.MasterOnlyRPC(_info), nothing else - no
-// photonView.IsMine gate like HurtOtherRPC/HealOtherRPC have. That means Revive Self genuinely
-// works for a guest once MasterRpcSelfBypass is on (patched in Patches.cs), since ReviveRPC then
-// runs to completion on your own client the same way it would on the real master's. Revive Other
-// is a different story: sending it targets someone else's PlayerAvatar, so it also runs on THEIR
-// client - and their machine isn't patched by anything running on yours, so their own copy of
-// MasterOnlyRPC still correctly rejects it unless you're actually master. As a guest all you get
-// is a local-only illusion (your own replica of them stands back up on your screen, nothing
-// changes on their end or anyone else's) - real for host/singleplayer only.
+// PlayerAvatar.ReviveRPC goes to everyone and each client checks SemiFunc.MasterOnlyRPC itself.
+// MasterRpcSelfBypass only patches OUR copy, so a guest calling Revive stood up on its own screen
+// only - the host and everyone else still had the head, and the local body walked around desynced.
+// Revive Self therefore goes through DeathRelocateHack for a guest (moves the head to where the game
+// really revives it); Revive Other / auto-revive stay host-only for real.
 internal static class ReviveHack
 {
-    public static void ReviveSelf()
-    {
-        PlayerAvatar local = PlayerAvatar.instance;
-        if (local == null) return;
-        if (!GameReflect.Get<bool>(local, "deadSet")) return;
-        local.Revive(false);
-    }
+    public static void ReviveSelf() => DeathRelocateHack.ReviveSelf();
 
     public static void ReviveOther()
     {
@@ -35,6 +33,10 @@ internal static class ReviveHack
         if (!CheatState.AutoReviveTeammates.Value) return;
         if (UnityEngine.Time.unscaledTime < _nextAutoRevive) return;
         _nextAutoRevive = UnityEngine.Time.unscaledTime + AutoReviveInterval;
+        // ReviveRPC's MasterOnlyRPC guard rejects us on the host side when we are a guest -
+        // calling it every 2 s then just floods the wire with silently-dropped RPCs. The toggle
+        // description already says the auto-revive is master-only; stay honest to that here.
+        if (Photon.Pun.PhotonNetwork.InRoom && !Photon.Pun.PhotonNetwork.IsMasterClient) return;
 
         GameDirector director = GameDirector.instance;
         System.Collections.Generic.List<PlayerAvatar> players = director != null

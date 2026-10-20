@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using Photon.Pun;
 
 namespace RepoCheatMenu;
@@ -25,6 +33,10 @@ internal static class NameChangerHack
 
         if (GameManager.Multiplayer())
         {
+            // Every new avatar (one per level) names itself from the Photon nickname
+            // (PlayerAvatar.AddToStatsManager -> SemiFunc.PlayerGetName -> Owner.NickName), so without this the
+            // rename reverted at the first scene change.
+            PhotonNetwork.NickName = newName;
             PhotonView view = GameReflect.Get<PhotonView>(avatar, "photonView");
             view?.RPC("AddToStatsManagerRPC", RpcTarget.AllBuffered, newName, steamId);
         }
@@ -46,9 +58,8 @@ internal static class NameChangerHack
 
         PlayerAvatar local = PlayerAvatar.instance;
         if (local == null || local.photonView == null) return;
-        if (local.photonView.Owner == PhotonNetwork.MasterClient) return; // we ARE the host - nothing to mimic
 
-        PlayerAvatar host = PlayerTargets.Host();
+        PlayerAvatar host = PlayerTargets.MimicSource(); // the host, or the picked player
         string hostName = host != null ? GameReflect.Get<string>(host, "playerName") : null;
         if (string.IsNullOrEmpty(hostName) || hostName == _lastMimickedHostName) return;
 

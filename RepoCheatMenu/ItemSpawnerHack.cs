@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using System.Linq;
 using Photon.Pun;
@@ -37,9 +45,10 @@ internal static class ItemSpawnerHack
         return names;
     }
 
-    public static void SpawnSelected()
+    public static void SpawnSelected() => SpawnSelected(CheatState.ItemSpawnerName.Value);
+
+    public static void SpawnSelected(string targetName)
     {
-        string targetName = CheatState.ItemSpawnerName.Value;
         if (string.IsNullOrEmpty(targetName) || targetName == "None")
         {
             Plugin.Log.LogInfo("Item Spawner had no effect - pick an item first (cycle or Refresh).");

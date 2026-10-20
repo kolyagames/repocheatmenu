@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using UnityEngine;
 
 namespace RepoCheatMenu;
@@ -30,16 +38,19 @@ internal static class DeadFlyHack
 
         Transform camTransform = SpectateCamera.instance != null ? SpectateCamera.instance.transform : null;
         if (camTransform == null) return;
+        // Don't steer the dead-fly while the player is typing in chat or the mod's menu - Space (Jump)
+        // was teleporting the deathHead up every time the chatter hit the spacebar.
+        if (UiInput.TypingInMenu()) return;
 
         float forwardIn = SemiFunc.InputMovementY();
         float strafeIn = SemiFunc.InputMovementX();
         Vector3 dir = camTransform.forward * forwardIn + camTransform.right * strafeIn;
-        if (SemiFunc.InputDown(InputKey.Jump)) dir += Vector3.up;
-        if (SemiFunc.InputDown(InputKey.Crouch)) dir += Vector3.down;
+        if (SemiFunc.InputHold(InputKey.Jump)) dir += Vector3.up;
+        if (SemiFunc.InputHold(InputKey.Crouch)) dir += Vector3.down;
         if (dir.sqrMagnitude < 0.0001f) return;
         if (dir.sqrMagnitude > 1f) dir.Normalize();
 
         Vector3 next = physObject.transform.position + dir * CheatState.DeadFlySpeed.Value * TickInterval;
-        physObject.Teleport(next, physObject.transform.rotation);
+        GameReflect.TeleportSafe(physObject, next, physObject.transform.rotation, "DeadFlyHack");
     }
 }

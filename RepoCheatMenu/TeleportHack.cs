@@ -1,3 +1,11 @@
+﻿// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -27,6 +35,20 @@ internal static class TeleportHack
 
     private static PlayerAvatar _pendingPull;
     private static float _pullDeadline;
+
+    // Plain local move of our own body to a world position (no network authority involved, same write
+    // as TeleportToPlayer). Used by the block scripts' "Телепорт" block.
+    public static bool TeleportSelfTo(Vector3 pos, string label)
+    {
+        PlayerController controller = PlayerController.instance;
+        if (controller == null || controller.rb == null) return false;
+        Vector3 from = controller.transform.position;
+        controller.rb.velocity = Vector3.zero;
+        controller.rb.position = pos;
+        controller.transform.position = pos;
+        EventLog.Write("teleport", $"self -> {label}: {EventLog.Pos(from)} -> {EventLog.Pos(pos)} (dist {Vector3.Distance(from, pos):0.#}m)");
+        return true;
+    }
 
     public static void TeleportToPlayer()
     {
@@ -84,7 +106,7 @@ internal static class TeleportHack
             PhysGrabObject body = tumble != null ? GameReflect.Get<PhysGrabObject>(tumble, "physGrabObject") : null;
             Vector3 from = _pendingPull.transform.position;
             Vector3 to = local.transform.position + local.transform.forward * 1.5f + Vector3.up * 0.2f;
-            body?.Teleport(to, local.transform.rotation);
+            if (body != null) GameReflect.TeleportSafe(body, to, local.transform.rotation, "TeleportHack");
 
             EventLog.Write("teleport", $"pull player {PlayerTargets.NameOf(_pendingPull)} -> me: " +
                 $"{EventLog.Pos(from)} -> {EventLog.Pos(to)}" + (body == null ? " (NO physGrabObject - no-op)" : ""));
@@ -126,7 +148,7 @@ internal static class TeleportHack
         if (body == null) return;
 
         Vector3 pos = local.transform.position + local.transform.forward * 2f + Vector3.up * 0.5f;
-        body.Teleport(pos, local.transform.rotation);
+        GameReflect.TeleportSafe(body, pos, local.transform.rotation, "TeleportHack");
     }
 
     // "Swarm the Group" - finds whichever cluster of players is currently biggest (most players
@@ -157,7 +179,7 @@ internal static class TeleportHack
         PhysGrabObject body = GetEnemyBody(enemy);
         if (body == null) return;
 
-        body.Teleport(cluster.Value, enemy.transform.rotation);
+        GameReflect.TeleportSafe(body, cluster.Value, enemy.transform.rotation, "TeleportHack");
         Plugin.Log.LogInfo($"Swarm the Group: sent an enemy to a group of {count} player(s).");
     }
 
@@ -174,7 +196,7 @@ internal static class TeleportHack
 
         EnemyParent enemy = FindNearestEnemyTo(cluster.Value);
         PhysGrabObject body = enemy != null ? GetEnemyBody(enemy) : null;
-        body?.Teleport(cluster.Value, enemy.transform.rotation);
+        if (body != null) GameReflect.TeleportSafe(body, cluster.Value, enemy.transform.rotation, "TeleportHack");
     }
 
     // Trap Room - Swarm the Group's targeting, but also rips every door within TrapDoorRadius of
@@ -203,7 +225,7 @@ internal static class TeleportHack
         {
             EnemyParent enemy = FindNearestEnemyTo(center);
             PhysGrabObject enemyBody = enemy != null ? GetEnemyBody(enemy) : null;
-            enemyBody?.Teleport(center, enemy.transform.rotation);
+            if (enemyBody != null) GameReflect.TeleportSafe(enemyBody, center, enemy.transform.rotation, "TrapRoom.swarm");
             _trapNextSwarm = Time.unscaledTime + TrapSwarmInterval;
         }
 
@@ -239,7 +261,7 @@ internal static class TeleportHack
             if (physObject == null) continue;
 
             if ((physObject.transform.position - wallPos).sqrMagnitude > 0.25f)
-                physObject.Teleport(wallPos, facing);
+                GameReflect.TeleportSafe(physObject, wallPos, facing, "TrapRoom.door");
         }
     }
 
@@ -274,15 +296,29 @@ internal static class TeleportHack
         foreach (EnemyParent parent in enemies)
         {
             if (parent == null) continue;
+            // Skip already-dead or de-spawned entries: EnemyParent.Spawned flips false when the
+            // director has unregistered them (confirmed in the decompiled EnemyParent.cs), and
+            // dropping a corpse from 50 m up just thrashes SetPositionRPC-s on the host for no
+            // damage.
+            if (!GameReflect.Get<bool>(parent, "Spawned")) continue;
+            if (IsEnemyDead(parent)) continue;
+
             PhysGrabObject body = GetEnemyBody(parent);
             if (body == null) continue;
 
             Vector3 pos = body.transform.position + Vector3.up * DropHeight;
-            body.Teleport(pos, body.transform.rotation);
+            GameReflect.TeleportSafe(body, pos, body.transform.rotation, "TeleportHack");
             count++;
         }
 
         if (count > 0) Plugin.Log.LogInfo($"Enemy Drop Kill: dropped {count} enemy(ies) from height.");
+    }
+
+    private static bool IsEnemyDead(EnemyParent parent)
+    {
+        Enemy enemy = GameReflect.Get<Enemy>(parent, "Enemy");
+        EnemyHealth health = enemy != null ? GameReflect.Get<EnemyHealth>(enemy, "Health") : null;
+        return health != null && GameReflect.Get<bool>(health, "dead");
     }
 
     private static Vector3? FindBiggestClusterCenter(out int bestCount)
@@ -295,7 +331,8 @@ internal static class TeleportHack
         List<PlayerAvatar> alive = new();
         foreach (PlayerAvatar p in players)
         {
-            if (p == null || GameReflect.Get<bool>(p, "deadSet")) continue;
+            if (p == null || p.transform == null) continue;
+            if (GameReflect.Get<bool>(p, "deadSet")) continue;
             alive.Add(p);
         }
         if (alive.Count == 0) return null;
@@ -327,7 +364,11 @@ internal static class TeleportHack
         float nearestDist = float.MaxValue;
         foreach (EnemyParent e in enemies)
         {
-            if (e == null) continue;
+            if (e == null || e.transform == null) continue;
+            // Skip de-spawned or dead enemies - teleporting a corpse to a cluster shows up as a
+            // random prop appearing out of thin air for everyone else and does no harm anyway.
+            if (!GameReflect.Get<bool>(e, "Spawned")) continue;
+            if (IsEnemyDead(e)) continue;
             float d = Vector3.Distance(origin, e.transform.position);
             if (d < nearestDist) { nearestDist = d; nearest = e; }
         }
@@ -366,7 +407,9 @@ internal static class TeleportHack
         float nearestDist = float.MaxValue;
         foreach (EnemyParent e in enemies)
         {
-            if (e == null) continue;
+            if (e == null || e.transform == null) continue;
+            if (!GameReflect.Get<bool>(e, "Spawned")) continue;
+            if (IsEnemyDead(e)) continue;
             float d = Vector3.Distance(local.transform.position, e.transform.position);
             if (d < nearestDist) { nearestDist = d; nearest = e; }
         }

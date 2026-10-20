@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -27,6 +35,7 @@ internal static class CustomGui
 {
     private static CustomGuiGraphic _rectGraphic;
     private static CustomGuiGraphic _textGraphic;
+    private static CustomGuiGraphic _textRegular, _textMedium;
 
     public static void Init(Transform canvasParent)
     {
@@ -34,6 +43,30 @@ internal static class CustomGui
 
         _rectGraphic = CreateSurface(canvasParent, "CustomGuiRects", isText: false);
         _textGraphic = CreateSurface(canvasParent, "CustomGuiText", isText: true);
+
+        // Rockstar's UI font (SF Pro Display): two more text surfaces, one per face, used when
+        // TextStyle asks for them. If the font files are missing or Unity cannot read them, the style
+        // quietly falls back to the Arial surface above.
+        GlyphSource regular = RockFonts.Regular, medium = RockFonts.Medium;
+        if (regular != null)
+        {
+            _textRegular = CreateSurface(canvasParent, "CustomGuiTextRegular", isText: true);
+            _textRegular.Source = regular;
+        }
+        if (medium != null)
+        {
+            _textMedium = CreateSurface(canvasParent, "CustomGuiTextMedium", isText: true);
+            _textMedium.Source = medium;
+        }
+
+        // Unity rebuilds a dynamic font's atlas when it fills up; the renderer only picks up a texture on a
+        // material update, so tell the Arial surface (and any face that wraps a Unity Font) to refresh.
+        Font.textureRebuilt += _ =>
+        {
+            if (_textGraphic != null) _textGraphic.SetMaterialDirty();
+            if (_textRegular != null) _textRegular.SetMaterialDirty();
+            if (_textMedium != null) _textMedium.SetMaterialDirty();
+        };
     }
 
     private static CustomGuiGraphic CreateSurface(Transform canvasParent, string name, bool isText)
@@ -67,38 +100,109 @@ internal static class CustomGui
     {
         _rectGraphic?.Clear();
         _textGraphic?.Clear();
+        _textRegular?.Clear();
+        _textMedium?.Clear();
+        ClearTransform();
+        Style = RockFonts.Regular != null ? TextStyle.Regular : TextStyle.Default;
+    }
+
+    // Optional global transform for everything drawn while it is set: uniform scale around a pivot
+    // plus an alpha multiplier. The menu window uses it for its open/close animation, so the many
+    // pixel-space row helpers do not each have to know about it. Hit-testing (IsHovered) goes through
+    // the same transform. Always cleared at BeginFrame and by ClearTransform().
+    private static float _tfScale = 1f, _tfAlpha = 1f;
+    private static Vector2 _tfPivot;
+
+    public static void SetTransform(Vector2 pivot, float scale, float alpha)
+    {
+        _tfPivot = pivot;
+        _tfScale = scale;
+        _tfAlpha = alpha;
+    }
+
+    public static void ClearTransform()
+    {
+        _tfScale = 1f;
+        _tfAlpha = 1f;
+    }
+
+    private static Rect Tf(Rect r) =>
+        _tfScale == 1f ? r : new Rect(_tfPivot + (r.position - _tfPivot) * _tfScale, r.size * _tfScale);
+
+    private static Vector2 Tf(Vector2 p) => _tfScale == 1f ? p : _tfPivot + (p - _tfPivot) * _tfScale;
+
+    private static Color Ta(Color c)
+    {
+        c.a *= _tfAlpha;
+        return c;
     }
 
     public static void Rect(Rect area, Color color, float rounding = 0f)
     {
-        _rectGraphic?.AddRoundedRect(area, color, rounding);
+        _rectGraphic?.AddRoundedRect(Tf(area), Ta(color), rounding * _tfScale);
     }
 
     // Top/bottom gradient fill - see CustomGuiGraphic.AddRoundedRectGradient's own comment.
     public static void RectGradient(Rect area, Color top, Color bottom, float rounding = 0f)
     {
-        _rectGraphic?.AddRoundedRectGradient(area, top, bottom, rounding);
+        _rectGraphic?.AddRoundedRectGradient(Tf(area), Ta(top), Ta(bottom), rounding * _tfScale);
+    }
+
+    // Outline of a rounded rect, `thickness` wide, drawn inside `area`. The menu window's border.
+    public static void RoundedRing(Rect area, float rounding, float thickness, Color color)
+    {
+        _rectGraphic?.AddRoundedRing(Tf(area), rounding * _tfScale, thickness * _tfScale, Ta(color));
     }
 
     // A rounded rect with rounding == half its own width/height is a circle (the corner arcs meet
     // seamlessly) - no separate circle mesh code needed.
     public static void Circle(Vector2 center, float radius, Color color)
     {
-        _rectGraphic?.AddRoundedRect(new Rect(center.x - radius, center.y - radius, radius * 2f, radius * 2f), color, radius);
+        _rectGraphic?.AddRoundedRect(Tf(new Rect(center.x - radius, center.y - radius, radius * 2f, radius * 2f)), Ta(color), radius * _tfScale);
     }
+
+    // Cheap filled disc (fan of `segments` triangles) for particle effects, where hundreds are drawn a frame and
+    // the 28-point rounded-rect circle would blow the mesh's vertex budget.
+    public static void Disc(Vector2 center, float radius, Color color, int segments = 10)
+    {
+        _rectGraphic?.AddDisc(Tf(center), radius * _tfScale, Ta(color), segments);
+    }
+
+    public static int RectVertexCount => _rectGraphic != null ? _rectGraphic.VertexCount : 0;
 
     public static void Triangle(Vector2 a, Vector2 b, Vector2 c, Color color)
     {
-        _rectGraphic?.AddTriangle(a, b, c, color);
+        _rectGraphic?.AddTriangle(Tf(a), Tf(b), Tf(c), Ta(color));
     }
+
+    // Per-vertex colours - the HUD cards' soft accent glow fades from one corner of a squircle to the other.
+    public static void Triangle(Vector2 a, Vector2 b, Vector2 c, Color ca, Color cb, Color cc)
+    {
+        _rectGraphic?.AddTriangle(Tf(a), Tf(b), Tf(c), Ta(ca), Ta(cb), Ta(cc));
+    }
+
+    // Which face Text/MeasureText use. BeginFrame resets it to Regular (Rockstar's body face); a caller
+    // switches to Medium around titles and back.
+    public enum TextStyle { Default, Regular, Medium }
+    public static TextStyle Style;
+
+    private static CustomGuiGraphic TextSurface() => Style switch
+    {
+        TextStyle.Medium => _textMedium ?? _textRegular ?? _textGraphic,
+        TextStyle.Regular => _textRegular ?? _textGraphic,
+        _ => _textGraphic,
+    };
 
     public static void Text(Rect area, string text, int fontSize, Color color, TextAnchor anchor = TextAnchor.MiddleLeft)
     {
-        _textGraphic?.AddText(area, text, fontSize, color, anchor);
+        if (_tfScale != 1f) fontSize = Mathf.Max(6, Mathf.RoundToInt(fontSize * _tfScale));
+        TextSurface()?.AddText(Tf(area), text, fontSize, Ta(color), anchor);
     }
 
+    public static bool IsFocused(string id) => _focusedFieldId == id;
+
     public static float MeasureText(string text, int fontSize) =>
-        _textGraphic != null ? _textGraphic.MeasureWidth(text, fontSize) : 0f;
+        TextSurface() is { } surface ? surface.MeasureWidth(text, fontSize) : 0f;
 
     // Text that is trimmed with a trailing ellipsis until it fits the rect's width. Nothing here
     // clips at draw time (no scissor rect), so a long string otherwise runs straight off the panel
@@ -120,6 +224,8 @@ internal static class CustomGui
     {
         _rectGraphic?.CommitMesh();
         _textGraphic?.CommitMesh();
+        _textRegular?.CommitMesh();
+        _textMedium?.CommitMesh();
     }
 
     // Own hit-testing, no Unity EventSystem/GraphicRaycaster involved at all (both our surfaces
@@ -136,7 +242,16 @@ internal static class CustomGui
         return local;
     }
 
-    public static bool IsHovered(Rect area) => area.Contains(MouseLocal());
+    // While set (the menu's close animation) nothing reports as hovered, so clicks cannot reach a fading window.
+    public static bool NoInput;
+
+    public static bool IsHovered(Rect area) => !NoInput && Tf(area).Contains(MouseLocal());
+
+    public static Vector2 MouseLocalPos() => MouseLocal();
+
+    // The window transform, for things CustomGui does not draw itself (MenuIcons' sprites).
+    public static Rect TransformRect(Rect r) => Tf(r);
+    public static float TransformAlpha => _tfAlpha;
 
     // Immediate-mode button: draws itself (different fill when hovered) and reports whether it
     // was clicked THIS frame - no persistent Button/onClick object anywhere, matches how the rest
@@ -147,7 +262,7 @@ internal static class CustomGui
         bool hovered = IsHovered(area);
         Rect(area, hovered ? bgHover : bg, rounding);
         Text(area, label, fontSize, textColor, TextAnchor.MiddleCenter);
-        return hovered && Input.GetMouseButtonDown(0);
+        return hovered && UiInput.Down(0);
     }
 
     // Toggle: draws label + on/off pill, flips and returns the new value on click - the building
@@ -182,7 +297,7 @@ internal static class CustomGui
         Rect(new Rect(knobX - knobRadius, pillArea.y + pillArea.height * 0.5f - knobRadius, knobRadius * 2f, knobRadius * 2f),
             Color.white, knobRadius);
 
-        if (hovered && Input.GetMouseButtonDown(0))
+        if (hovered && UiInput.Down(0))
             return !value;
         return value;
     }
@@ -243,21 +358,58 @@ internal static class CustomGui
     private static string _focusedFieldId;
     private static int _cursorBlinkStart;
 
+    // A focused field only counts while it is still being drawn: clicking into a box and then closing the menu
+    // (or switching tab) leaves the id behind, and TypingInMenu() would then swallow every keybind for good.
+    private static int _focusDrawnFrame;
+    public static bool AnyFieldFocused
+    {
+        get
+        {
+            if (_focusedFieldId == null) return false;
+            if (Time.frameCount - _focusDrawnFrame > 3) { _focusedFieldId = null; return false; }
+            return true;
+        }
+    }
+    public static void ClearFocus() => _focusedFieldId = null;
+
+    // Ctrl+V / Ctrl+C arrive through the text input as the control characters 0x16 / 0x03 (WM_CHAR), which
+    // the "printable characters only" filter used to drop - pasting into a field (a script, a phrase) did
+    // nothing. Paste inserts the clipboard (one line for single-line fields), copy puts the field's text there.
+    private static string Paste(string value, bool singleLine)
+    {
+        string clip;
+        try { clip = GUIUtility.systemCopyBuffer ?? ""; }
+        catch (Exception) { return value; }
+        clip = clip.Replace("\r\n", "\n").Replace('\r', '\n');
+        if (singleLine) clip = clip.Replace('\n', ' ');
+        var sb = new System.Text.StringBuilder(value);
+        foreach (char ch in clip)
+            if (ch == '\n' || !char.IsControl(ch)) sb.Append(ch);
+        return sb.ToString();
+    }
+
+    private static void Copy(string value)
+    {
+        try { GUIUtility.systemCopyBuffer = value ?? ""; }
+        catch (Exception) { }
+    }
+
     public static string TextField(Rect area, string id, string value, Color bg, Color textColor, Color focusColor)
     {
         value ??= "";
         bool hovered = IsHovered(area);
         bool focused = _focusedFieldId == id;
+        if (focused) _focusDrawnFrame = Time.frameCount;
 
-        if (Input.GetMouseButtonDown(0))
+        if (UiInput.Down(0))
         {
-            if (hovered) { focused = true; _focusedFieldId = id; _cursorBlinkStart = Environment.TickCount; }
+            if (hovered) { focused = true; _focusedFieldId = id; _focusDrawnFrame = Time.frameCount; _cursorBlinkStart = Environment.TickCount; }
             else if (focused) { focused = false; _focusedFieldId = null; }
         }
 
         if (focused)
         {
-            foreach (char c in Input.inputString)
+            foreach (char c in UiInput.Typed())
             {
                 if (c is '\b')
                 {
@@ -267,6 +419,14 @@ internal static class CustomGui
                 {
                     focused = false;
                     _focusedFieldId = null;
+                }
+                else if (c == '\u0016')
+                {
+                    value = Paste(value, singleLine: true);
+                }
+                else if (c == '\u0003')
+                {
+                    Copy(value);
                 }
                 else if (!char.IsControl(c))
                 {
@@ -294,16 +454,17 @@ internal static class CustomGui
         value ??= "";
         bool hovered = IsHovered(area);
         bool focused = _focusedFieldId == id;
+        if (focused) _focusDrawnFrame = Time.frameCount;
 
-        if (Input.GetMouseButtonDown(0))
+        if (UiInput.Down(0))
         {
-            if (hovered) { focused = true; _focusedFieldId = id; _cursorBlinkStart = Environment.TickCount; }
+            if (hovered) { focused = true; _focusedFieldId = id; _focusDrawnFrame = Time.frameCount; _cursorBlinkStart = Environment.TickCount; }
             else if (focused) { focused = false; _focusedFieldId = null; }
         }
 
         if (focused)
         {
-            foreach (char c in Input.inputString)
+            foreach (char c in UiInput.Typed())
             {
                 if (c is '\b')
                 {
@@ -312,6 +473,14 @@ internal static class CustomGui
                 else if (c is '\n' or '\r')
                 {
                     value += '\n';
+                }
+                else if (c == '\u0016')
+                {
+                    value = Paste(value, singleLine: false);
+                }
+                else if (c == '\u0003')
+                {
+                    Copy(value);
                 }
                 else if (!char.IsControl(c))
                 {
@@ -351,12 +520,32 @@ internal sealed class CustomGuiGraphic : MaskableGraphic
 {
     private readonly List<UIVertex> _verts = new();
     private readonly List<int> _tris = new();
-    private static Font _font;
+    private static GlyphSource _arial;
+    private GlyphSource _source;
+
+    // Set after AddComponent, i.e. after OnEnable already handed the CanvasRenderer the default (Arial) texture.
+    // Only vertices are re-sent every frame (CommitMesh), so without SetMaterialDirty the new atlas would never
+    // reach the renderer and SF Pro's UVs would sample Arial's atlas - garbage glyphs.
+    public GlyphSource Source
+    {
+        get => _source;
+        set
+        {
+            _source = value;
+            SetMaterialDirty();
+        }
+    }
+
+    private GlyphSource _font => _source ?? _arial;
 
     protected override void Awake()
     {
         base.Awake();
-        _font ??= Resources.GetBuiltinResource<Font>("Arial.ttf") ?? Font.CreateDynamicFontFromOSFont("Arial", 32);
+        if (_arial == null)
+        {
+            Font arial = Resources.GetBuiltinResource<Font>("Arial.ttf") ?? Font.CreateDynamicFontFromOSFont("Arial", 32);
+            if (arial != null) _arial = new UnityFontGlyphSource(arial);
+        }
         material = Graphic.defaultGraphicMaterial;
     }
 
@@ -370,7 +559,7 @@ internal sealed class CustomGuiGraphic : MaskableGraphic
     // instead of one, negligible cost for a menu overlay.
     public bool IsTextSurface;
 
-    public override Texture mainTexture => IsTextSurface && _font != null ? _font.material.mainTexture : Texture2D.whiteTexture;
+    public override Texture mainTexture => IsTextSurface && _font != null ? _font.Texture : Texture2D.whiteTexture;
 
     public void Clear()
     {
@@ -387,6 +576,65 @@ internal sealed class CustomGuiGraphic : MaskableGraphic
             vh.AddVert(_verts[i]);
         for (int i = 0; i + 2 < _tris.Count + 1 && i + 2 < _tris.Count; i += 3)
             vh.AddTriangle(_tris[i], _tris[i + 1], _tris[i + 2]);
+    }
+
+    public int VertexCount => _verts.Count;
+
+    public void AddDisc(Vector2 center, float radius, Color color, int segments)
+    {
+        if (radius <= 0.05f || color.a <= 0.003f) return;
+        segments = Mathf.Clamp(segments, 5, 24);
+        int baseIndex = _verts.Count;
+        AddVertRaw(center, color);
+        for (int i = 0; i < segments; i++)
+        {
+            float a = i * Mathf.PI * 2f / segments;
+            AddVertRaw(center + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius, color);
+        }
+        for (int i = 0; i < segments; i++)
+        {
+            _tris.Add(baseIndex);
+            _tris.Add(baseIndex + 1 + i);
+            _tris.Add(baseIndex + 1 + (i + 1) % segments);
+        }
+    }
+
+    // Rounded ring: the strip between an outer rounded rect and the same rect inset by `thickness`.
+    public void AddRoundedRing(Rect area, float rounding, float thickness, Color color)
+    {
+        rounding = Mathf.Clamp(rounding, 0f, Mathf.Min(area.width, area.height) * 0.5f);
+        thickness = Mathf.Min(thickness, rounding > 0.01f ? rounding : thickness);
+        if (thickness <= 0.01f) return;
+        const int arcSteps = 8;
+
+        List<Vector2> Outline(Rect r, float rad)
+        {
+            var pts = new List<Vector2>();
+            void Corner(Vector2 c, float startDeg)
+            {
+                for (int i = 0; i <= arcSteps; i++)
+                {
+                    float a = (startDeg + 90f * i / arcSteps) * Mathf.Deg2Rad;
+                    pts.Add(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * rad);
+                }
+            }
+            Corner(new Vector2(r.xMax - rad, r.yMin + rad), 270f);
+            Corner(new Vector2(r.xMax - rad, r.yMax - rad), 0f);
+            Corner(new Vector2(r.xMin + rad, r.yMax - rad), 90f);
+            Corner(new Vector2(r.xMin + rad, r.yMin + rad), 180f);
+            return pts;
+        }
+
+        Rect inner = new(area.x + thickness, area.y + thickness, area.width - thickness * 2f, area.height - thickness * 2f);
+        List<Vector2> outer = Outline(area, rounding);
+        List<Vector2> inn = Outline(inner, Mathf.Max(0f, rounding - thickness));
+        int n = outer.Count;
+        for (int i = 0; i < n; i++)
+        {
+            int j = (i + 1) % n;
+            AddTriangle(outer[i], outer[j], inn[i], color);
+            AddTriangle(outer[j], inn[j], inn[i], color);
+        }
     }
 
     // Rounded rectangle: an 8-point-per-corner arc fan, own math (not a 9-sliced sprite like the
@@ -484,6 +732,15 @@ internal sealed class CustomGuiGraphic : MaskableGraphic
         _tris.Add(baseIndex); _tris.Add(baseIndex + 1); _tris.Add(baseIndex + 2);
     }
 
+    public void AddTriangle(Vector2 a, Vector2 b, Vector2 c, Color ca, Color cb, Color cc)
+    {
+        int baseIndex = _verts.Count;
+        AddVertRaw(a, ca);
+        AddVertRaw(b, cb);
+        AddVertRaw(c, cc);
+        _tris.Add(baseIndex); _tris.Add(baseIndex + 1); _tris.Add(baseIndex + 2);
+    }
+
     private void AddVertRaw(Vector2 pos, Color color)
     {
         var v = UIVertex.simpleVert;
@@ -537,11 +794,11 @@ internal sealed class CustomGuiGraphic : MaskableGraphic
     {
         if (string.IsNullOrEmpty(text) || _font == null) return 0f;
 
-        _font.RequestCharactersInTexture(text, fontSize, FontStyle.Normal);
+        _font.Prepare(text, fontSize);
         float total = 0f;
         foreach (char c in text)
         {
-            if (_font.GetCharacterInfo(c, out CharacterInfo info, fontSize)) total += info.advance;
+            if (_font.TryGet(c, fontSize, out GlyphQuad info)) total += info.Advance;
             else total += fontSize * 0.5f; // same fallback advance AddSingleLineText uses
         }
         return total;
@@ -551,13 +808,13 @@ internal sealed class CustomGuiGraphic : MaskableGraphic
     {
         if (string.IsNullOrEmpty(text)) return;
 
-        _font.RequestCharactersInTexture(text, fontSize, FontStyle.Normal);
+        _font.Prepare(text, fontSize);
 
         float totalWidth = 0f;
         foreach (char c in text)
         {
-            if (_font.GetCharacterInfo(c, out CharacterInfo info, fontSize))
-                totalWidth += info.advance;
+            if (_font.TryGet(c, fontSize, out GlyphQuad info))
+                totalWidth += info.Advance;
         }
 
         float startX = anchor is TextAnchor.MiddleLeft or TextAnchor.UpperLeft or TextAnchor.LowerLeft
@@ -571,28 +828,28 @@ internal sealed class CustomGuiGraphic : MaskableGraphic
 
         foreach (char c in text)
         {
-            if (!_font.GetCharacterInfo(c, out CharacterInfo info, fontSize))
+            if (!_font.TryGet(c, fontSize, out GlyphQuad info))
             {
                 cursor += fontSize * 0.5f;
                 continue;
             }
 
-            AddGlyphQuad(cursor, baseline, info, color);
-            cursor += info.advance;
+            if (info.HasBitmap) AddGlyphQuad(cursor, baseline, info, color);
+            cursor += info.Advance;
         }
     }
 
-    private void AddGlyphQuad(float x, float y, CharacterInfo info, Color color)
+    private void AddGlyphQuad(float x, float y, GlyphQuad info, Color color)
     {
         int baseIndex = _verts.Count;
 
-        Vector2 min = new(x + info.minX, y + info.minY);
-        Vector2 max = new(x + info.maxX, y + info.maxY);
+        Vector2 min = new(x + info.MinX, y + info.MinY);
+        Vector2 max = new(x + info.MaxX, y + info.MaxY);
 
-        AddGlyphVert(new Vector2(min.x, min.y), new Vector2(info.uvBottomLeft.x, info.uvBottomLeft.y), color);
-        AddGlyphVert(new Vector2(max.x, min.y), new Vector2(info.uvBottomRight.x, info.uvBottomRight.y), color);
-        AddGlyphVert(new Vector2(max.x, max.y), new Vector2(info.uvTopRight.x, info.uvTopRight.y), color);
-        AddGlyphVert(new Vector2(min.x, max.y), new Vector2(info.uvTopLeft.x, info.uvTopLeft.y), color);
+        AddGlyphVert(new Vector2(min.x, min.y), info.UvBL, color);
+        AddGlyphVert(new Vector2(max.x, min.y), info.UvBR, color);
+        AddGlyphVert(new Vector2(max.x, max.y), info.UvTR, color);
+        AddGlyphVert(new Vector2(min.x, max.y), info.UvTL, color);
 
         _tris.Add(baseIndex); _tris.Add(baseIndex + 1); _tris.Add(baseIndex + 2);
         _tris.Add(baseIndex); _tris.Add(baseIndex + 2); _tris.Add(baseIndex + 3);

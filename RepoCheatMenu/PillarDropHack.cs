@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using UnityEngine;
 
 namespace RepoCheatMenu;
@@ -31,7 +39,9 @@ internal static class PillarDropHack
         if (!GameReflect.Get<bool>(enemy, "HasHealth")) return;
 
         EnemyHealth health = GameReflect.Get<EnemyHealth>(enemy, "Health");
-        if (health == null || health.healthCurrent > 0) return;
+        // healthCurrent is internal in the real game assembly: a direct read threw FieldAccessException
+        // here, so the multiplier never ran.
+        if (health == null || GameReflect.Get<int>(health, "healthCurrent") > 0) return;
         if (!health.spawnValuable) return;
 
         if (CheatState.PillarDropRemoveLimit.Value && health.spawnValuableMax < RemovedLimitValue)

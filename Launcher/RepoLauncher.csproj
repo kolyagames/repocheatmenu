@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>RepoLauncher</AssemblyName>
+    <RootNamespace>RepoLauncher</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Version>1.0.0</Version>
+    <Company>Kolya</Company>
+    <Authors>Kolya</Authors>
+    <Product>RepoLauncher</Product>
+    <Copyright>© Kolya</Copyright>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <NoWarn>CA1416</NoWarn>
+  </PropertyGroup>
+
+</Project>

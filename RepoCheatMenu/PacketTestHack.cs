@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
@@ -28,8 +36,18 @@ internal static class PacketTestHack
     // waiting on OnConnectedToMaster (Steam auth ticket sent, AppId set, but the callback never
     // fires) once the game's later setup finds a client "already there" instead of building its
     // own. Subscribe lazily instead, once we're already confirmed in a room - see EnsureSubscribed.
+    //
+    // Also syncs _isEnabled from the persisted ConfigEntry - found live-auditing this file: BepInEx
+    // writes CheatState.SendTestPacket to disk, so a game that starts with the toggle already ON
+    // reloads it as true, but _isEnabled (a plain static bool, not the ConfigEntry itself) defaulted
+    // to false and was only ever set from OnToggled's CHANGE callback - which never fires on load,
+    // only on a later click. Net effect before this fix: the checkbox shows ON, nothing is actually
+    // sent, until the player clicks it off and back on once. Apply() below now starts the actual
+    // subscribe/send lazily once a room exists, so this only needs to restore the flag, not also
+    // duplicate the InRoom check (which would always fail this early anyway - no room yet at Awake).
     public static void Init()
     {
+        _isEnabled = CheatState.SendTestPacket.Value;
     }
 
     public static void Shutdown()
@@ -47,41 +65,48 @@ internal static class PacketTestHack
     }
 
     // Wired straight to the "Send Test Packet" checkbox's onClick (see OverlayUI's Misc tab).
-    // Turning it on starts an infinite loop that Apply() below drains over time at a capped rate.
+    // Turning it on just flips the flag - Apply() below does the actual InRoom check and subscribe,
+    // the same lazy path Init() above now relies on to resume a toggle left ON from last session.
     public static void OnToggled(bool enabled)
     {
         _isEnabled = enabled;
 
-        if (!_isEnabled)
+        if (!_isEnabled && _subscribed)
         {
             Plugin.Log.LogInfo("[PacketTestHack] Toggle turned OFF. Stopping packet transmission.");
-            return;
+            PhotonNetwork.NetworkingClient.EventReceived -= OnEventReceived;
+            _subscribed = false;
         }
-
-        if (!PhotonNetwork.InRoom)
-        {
-            Plugin.Log.LogWarning("[PacketTestHack] Not in a Photon room - nothing to send to.");
-            _isEnabled = false;
-            return;
-        }
-
-        EnsureSubscribed(); // safe here - InRoom guarantees the game's own client is already up
-        _lastSendTick = System.Environment.TickCount - CheatState.PacketTestIntervalMs.Value; // Отправить первый пакет сразу же
-        Plugin.Log.LogInfo($"[PacketTestHack] Toggle turned ON. Sending empty test packets every {CheatState.PacketTestIntervalMs.Value}ms.");
     }
 
     // Polled from Patches.cs's TimeTickPatch.ApplyStats (~33/sec) like the rest of the menu's
-    // per-tick hacks - drains the burst at BurstIntervalMs spacing regardless of how often this
-    // is called.
+    // per-tick hacks.
     public static void Apply()
     {
         if (!_isEnabled) return;
 
         if (!PhotonNetwork.InRoom)
         {
-            Plugin.Log.LogWarning("[PacketTestHack] Left the Photon room - stopping transmission.");
-            _isEnabled = false;
+            // Only a real "you left mid-session" event if we'd actually started sending - at
+            // main-menu (never joined a room yet this session, e.g. right after Init() restored
+            // a persisted ON toggle) this is expected and should just wait quietly, not disable
+            // itself and re-arm the exact bug Init()'s comment above describes.
+            if (_subscribed)
+            {
+                Plugin.Log.LogWarning("[PacketTestHack] Left the Photon room - stopping transmission.");
+                PhotonNetwork.NetworkingClient.EventReceived -= OnEventReceived;
+                _subscribed = false;
+                _isEnabled = false;
+                CheatState.SendTestPacket.Value = false; // keep the checkbox in sync with reality
+            }
             return;
+        }
+
+        if (!_subscribed)
+        {
+            EnsureSubscribed(); // safe here - InRoom guarantees the game's own client is already up
+            _lastSendTick = System.Environment.TickCount - CheatState.PacketTestIntervalMs.Value; // Отправить первый пакет сразу же
+            Plugin.Log.LogInfo($"[PacketTestHack] Sending empty test packets every {CheatState.PacketTestIntervalMs.Value}ms.");
         }
 
         int now = System.Environment.TickCount;

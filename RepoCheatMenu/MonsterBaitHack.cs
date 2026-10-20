@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using Photon.Pun;
 using UnityEngine;
 
@@ -31,7 +39,7 @@ internal static class MonsterBaitHack
         PhotonView view = nearest.GetComponent<PhotonView>();
         if (body == null || view == null) return;
 
-        body.Teleport(target.transform.position, nearest.transform.rotation);
+        GameReflect.TeleportSafe(body, target.transform.position, nearest.transform.rotation, "MonsterBaitHack");
 
         if (GameManager.Multiplayer())
             view.RPC("MusicKeyPressedRPC", RpcTarget.All, 0, -1);

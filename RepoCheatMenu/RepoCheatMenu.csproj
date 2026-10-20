@@ -4,6 +4,13 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>10</LangVersion>
     <AssemblyName>RepoCheatMenu</AssemblyName>
+    <!-- Shows up in Windows Explorer's file Properties -> Details tab for the built .dll - a
+         cheap, non-invasive way to keep authorship visible even on a copy handed around outside
+         this repo. -->
+    <Company>Kolya</Company>
+    <Authors>Kolya</Authors>
+    <Product>RepoCheatMenu</Product>
+    <Copyright>© Kolya</Copyright>
     <!-- This is a class library by SDK default, which normally does NOT copy its NuGet
          dependencies' DLLs to the output folder (it assumes a host app will resolve them).
          BepInEx has no such resolution step - it just loads RepoCheatMenu.dll directly - so

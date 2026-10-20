@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -86,12 +94,16 @@ internal static class ScriptEngine
     // same reason, without hard-coding which one specifically.
     private static string FindAssemblyFile(string simpleName)
     {
-        string fileName = simpleName + ".dll";
+        // Hot-reload installs keep the mod itself as RepoCheatMenu.core (see RepoCheatMenu.Loader),
+        // so look for that name too - same bytes, only the extension differs.
+        string[] fileNames = { simpleName + ".dll", simpleName + ".core" };
         foreach (string root in new[] { Paths.PluginPath, Paths.ManagedPath })
         {
             try
             {
-                string found = Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories).FirstOrDefault();
+                string found = fileNames
+                    .Select(name => Directory.EnumerateFiles(root, name, SearchOption.AllDirectories).FirstOrDefault())
+                    .FirstOrDefault(f => f != null);
                 if (found != null) return found;
             }
             catch

@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 namespace RepoCheatMenu;
 
 // PlayerHealth.Heal() (confirmed in the decompiled source) only checks
@@ -18,6 +26,9 @@ internal static class HealHack
     public static void ApplyHealSpam()
     {
         if (!CheatState.HealSpam.Value) return;
+        // HealOtherRPC is sent from our local avatar's view; the ghost filter drops it before it
+        // reaches the host, so no one actually heals. Skip silently.
+        if (GhostObserverHack.LocalRpcIsMuted) return;
         if (UnityEngine.Time.unscaledTime < _nextSpam) return;
         _nextSpam = UnityEngine.Time.unscaledTime + SpamInterval;
 

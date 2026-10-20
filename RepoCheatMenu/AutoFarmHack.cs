@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using Unity.AI.Navigation;
 using UnityEngine;
@@ -82,6 +90,13 @@ internal static class AutoFarmHack
     public static void Apply()
     {
         if (!CheatState.AutoFarm.Value || !GameState.IsInGame())
+        {
+            Reset();
+            return;
+        }
+        // Ghost: same hard block as AutoLoot - we can't actually pick anything up, so running the
+        // path-plan + teleport-step logic every tick accomplishes nothing. Reset and bail.
+        if (GhostObserverHack.LocalRpcIsMuted)
         {
             Reset();
             return;
@@ -432,22 +447,8 @@ internal static class AutoFarmHack
 
     private static void TryActivateExtraction()
     {
-        RoundDirector director = RoundDirector.instance;
-        if (director == null) return;
-        if (GameReflect.Get<bool>(director, "extractionPointActive")) return;
-
-        List<GameObject> points = GameReflect.Get<List<GameObject>>(director, "extractionPointList");
-        if (points == null) return;
-
-        foreach (GameObject go in points)
-        {
-            if (go == null) continue;
-            Photon.Pun.PhotonView view = go.GetComponent<Photon.Pun.PhotonView>();
-            if (view == null) continue;
-
-            director.RequestExtractionPointActivation(view.ViewID);
-            return;
-        }
+        PlayerAvatar local = PlayerAvatar.instance;
+        if (local != null) ExtractionActivatorHack.RequestNearestIdle(local.transform.position);
     }
 
     private static void MaybeRepath(Vector3 from, Vector3 to)

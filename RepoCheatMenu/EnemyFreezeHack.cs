@@ -1,3 +1,11 @@
+// ============================================================================
+// RepoCheatMenu - вспомогательный мод для R.E.P.O.
+// Copyright (c) 2026 Kolya. Все права защищены.
+// Исходный код закрыт: без разрешения автора не копировать, не публиковать
+// и не выдавать за свою работу. Подробности - LICENSE.txt.
+// R.E.P.O. принадлежит semiwork; мод неофициальный и с ней не связан.
+// ============================================================================
+
 using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
@@ -58,7 +66,10 @@ internal static class EnemyFreezeHack
 
             if (multiplayer)
             {
-                PhotonView view = GameReflect.Get<PhotonView>(enemy, "photonView");
+                // Enemy's own field is "PhotonView" (capital P, set from GetComponent in Awake); the lower-case
+                // "photonView" is MonoBehaviourPun's PROPERTY, which GameReflect (fields only) never finds -
+                // this used to read null and skip every enemy, so the freeze never ran in multiplayer.
+                PhotonView view = GameReflect.Get<PhotonView>(enemy, "PhotonView") ?? enemy.GetComponent<PhotonView>();
                 if (view == null) continue;
                 view.RPC("FreezeRPC", RpcTarget.All, FreezeDuration);
             }
